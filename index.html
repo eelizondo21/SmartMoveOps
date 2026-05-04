@@ -1118,7 +1118,7 @@ function renderBD(){
     filtered.map(({r,b,i},fi)=>{
       const oi=i;
       const inv=r.invoice;
-      const invHTML=inv==='ok'?(r.invoiceLink?`<a href="${escHtml(r.invoiceLink)}" target="_blank" style="color:var(--green)">✔</a>`:`<span style="color:var(--green);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">✔</span>`):inv==='bad'?`<span style="color:var(--red);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">✗</span>`:`<span style="color:var(--text3);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">—</span>`;
+      const invHTML=inv==='ok'?(r.invoiceLink?`<a href="${escHtml(r.invoiceLink)}" target="_blank" style="color:var(--green)">✗</a>`:`<span style="color:var(--red);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">✔</span>`):inv==='bad'?`<span style="color:var(--green);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">✗</span>`:`<span style="color:var(--text3);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">—</span>`;
       const diffStr=String(r.difference||'');
       const hasDiff=diffStr!==''&&diffStr!=='✓'&&Math.abs(parseFloat(diffStr))>=0.01;
       const priceEval=evalPriceFormula(String(r.price||''),oi);
