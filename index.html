@@ -606,17 +606,42 @@ function initFirebase(config){
 
 function saveFB(){
   if(!_fbInit||!_fbDB)return;
-  // Build archive object from allJobs
-  const archive={};
-  allJobs.forEach(j=>{if(j.jobNumber)archive[j.jobNumber]=j;});
-  _fbDB.ref('smv').set({archive,csatData,bdData,obData,REPS}).catch(e=>console.warn('FB err',e));
+  // Use granular updates — NEVER overwrite the whole tree
+  // Each key is updated independently so concurrent users don't clobber each other
+  const updates={};
+  updates['smv/REPS']=REPS;
+  updates['smv/bdData']=bdData;
+  if(Object.keys(obData).length)updates['smv/obData']=obData;
+  // Only push csatData entries that have actual changes (non-empty)
+  Object.keys(csatData).forEach(k=>{
+    updates['smv/csatData/'+k]=csatData[k];
+  });
+  _fbDB.ref().update(updates).catch(e=>console.warn('FB err',e));
 }
 
-// Push ALL current localStorage data to Firebase (for initial migration)
+// Push only NEW jobs to Firebase — merges, never overwrites existing jobs
+function pushNewJobsToFirebase(newJobs){
+  if(!_fbInit||!_fbDB)return;
+  const updates={};
+  newJobs.forEach(j=>{
+    if(j.jobNumber)updates['smv/archive/'+j.jobNumber]=j;
+  });
+  if(Object.keys(updates).length)
+    _fbDB.ref().update(updates).catch(e=>console.warn('FB archive err',e));
+}
+
+// Push ALL — only used for initial migration, still uses merge
 function pushAllToFirebase(){
   if(!_fbInit||!_fbDB){toast('Conecta Firebase primero en Settings','err');return;}
-  saveFB();
-  toast('📤 Todos los datos subidos a Firebase — los demás usuarios los verán al recargar','ok');
+  const updates={};
+  updates['smv/REPS']=REPS;
+  updates['smv/bdData']=bdData;
+  updates['smv/obData']=obData;
+  Object.keys(csatData).forEach(k=>{updates['smv/csatData/'+k]=csatData[k];});
+  allJobs.forEach(j=>{if(j.jobNumber)updates['smv/archive/'+j.jobNumber]=j;});
+  _fbDB.ref().update(updates)
+    .then(()=>toast('📤 Datos subidos a Firebase — visible para todos','ok'))
+    .catch(e=>toast('Error: '+e.message,'err'));
 }
 
 function setFbStatus(ok){
@@ -755,7 +780,9 @@ function importData(){
   allJobs.forEach(j=>{if(!csatData[j.jobNumber])csatData[j.jobNumber]={ndccRep:assignRep(j),ndccStatus:'',mmcRep:assignRep(j),mmcStatus:'',notes:'',claim:null,manualTime:''};});
   rebuildBranchFilter();rebuildRepFilter();document.getElementById('filterDate').value='';
   renderTable();updateStats();checkRball();saveState();
-  toast(`✅ ${newJobs.length} new jobs merged (${allJobs.length} total)`,'ok');
+  // Push only the NEW jobs to Firebase (merge — no overwrites)
+  pushNewJobsToFirebase(newJobs);
+  toast(`✅ ${newJobs.length} new jobs merged (${allJobs.length} total) — sincronizando con Firebase`,'ok');
 }
 
 function smCalc(job){
