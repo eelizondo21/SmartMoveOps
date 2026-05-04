@@ -212,6 +212,7 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
   </nav>
   <div class="header-right">
     <button class="btn btn-s btn-sm" onclick="openModal('settingsModal')">⚙️ Settings</button>
+    <button class="btn btn-s btn-sm" id="pushFbBtn" onclick="pushAllToFirebase()" title="Subir todos los datos a Firebase para que los vean todos" style="border-color:rgba(244,140,30,.4);color:var(--accent)">📤 Push Firebase</button>
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙 Dark</button>
     <button class="rball-btn bad" id="rballBtn" onclick="checkRball()">
       <div class="orb red" id="rballOrb"></div>
@@ -537,6 +538,8 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
         placeholder='{"apiKey":"...","projectId":"...","databaseURL":"https://...-default-rtdb.firebaseio.com"}'></textarea>
       <div id="fbStatusDiv" style="margin-top:5px"></div>
       <p style="font-size:10px;color:var(--text3);margin-top:4px">Con Firebase, todos los cambios se ven en tiempo real para todos los usuarios con el link.</p>
+      <p style="font-size:10px;color:var(--yellow);margin-top:4px">⚠️ En Firebase Console → Realtime Database → Reglas, asegúrate de tener:<br>
+      <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">{ "rules": { ".read": true, ".write": true } }</code></p>
     </div>
     <div class="modal-acts">
       <button class="btn btn-s" onclick="closeModal('settingsModal')">Close</button>
@@ -1498,12 +1501,26 @@ loadState();
 rebuildRepFilter();rebuildBranchFilter();renderRepTags();updateStats();checkRball();
 if(allJobs.length>0){renderTable();setTimeout(()=>toast(`📂 ${allJobs.length} jobs cargados de localStorage`,'ok'),300);}
 
-// Try to restore Firebase connection
+// ═══ FIREBASE AUTO-CONNECT ═══
+// Config hardcodeada — todos los usuarios conectan automáticamente
+const _FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC65V2DmITduj-eB2Iakw4YPVf1pu14gBk",
+  authDomain: "smartmove-ops.firebaseapp.com",
+  projectId: "smartmove-ops",
+  storageBucket: "smartmove-ops.firebasestorage.app",
+  messagingSenderId: "46772720427",
+  appId: "1:46772720427:web:9fbebcf05ed369ff9f6b6e",
+  databaseURL: "https://smartmove-ops-default-rtdb.firebaseio.com"
+};
 try{
-  const savedCfg=localStorage.getItem('smv_fb_config');
-  if(savedCfg)initFirebase(JSON.parse(savedCfg));
-  else setFbStatus(false);
-}catch(e){setFbStatus(false);}
+  initFirebase(_FIREBASE_CONFIG);
+  // Pre-fill Settings textarea so el equipo puede verla
+  const fbInp=document.getElementById('fbConfigInput');
+  if(fbInp)fbInp.value=JSON.stringify(_FIREBASE_CONFIG,null,2);
+}catch(e){
+  console.warn('Firebase auto-connect failed',e);
+  setFbStatus(false);
+}
 
 // Init branch checkboxes modal
 document.getElementById('branchCheckboxes').innerHTML=ALL_BRANCHES.map(b=>`
