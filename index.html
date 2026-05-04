@@ -755,6 +755,16 @@ function importData(){
     laborCost:find('estimated labor cost','labor cost'),materials:find('estimated materials cost','materials'),
     fuel:find('estimated fuel surcharges cost','fuel'),
   };
+  // Debug: muestra los primeros headers para diagnosticar columnas
+  const timeIdx=idx.startTime;
+  if(timeIdx===-1){
+    toast('⚠️ Columna de hora no encontrada. Headers: '+headers.slice(0,12).join(' | '),'err');
+  } else {
+    // Show sample value from first data row
+    const sampleCols=splitLine(lines[1],sep);
+    const sampleVal=sampleCols[timeIdx]||'(vacío)';
+    toast('🕐 Hora encontrada en col "'+headers[timeIdx]+'" → valor: '+sampleVal,'ok');
+  }
   const newJobs=[];
   for(let i=1;i<lines.length;i++){
     const cols=splitLine(lines[i],sep);
