@@ -335,15 +335,15 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
         </div>
         <!-- TOP FILTERS -->
         <div class="bd-filters" id="bdFilters">
-          <select class="fi" id="bdFilterWeek" onchange="renderBD()"><option value="">All Weeks</option></select>
-          <select class="fi" id="bdFilterBranch" onchange="renderBD()"><option value="">All Branches</option></select>
-          <select class="fi" id="bdFilterAgent" onchange="renderBD()"><option value="">All Agents</option></select>
-          <select class="fi" id="bdFilterStatus" onchange="renderBD()">
+          <select class="fi" id="bdFilterWeek" onchange="applyBDFilter()"><option value="">All Weeks</option></select>
+          <select class="fi" id="bdFilterBranch" onchange="applyBDFilter()"><option value="">All Branches</option></select>
+          <select class="fi" id="bdFilterAgent" onchange="applyBDFilter()"><option value="">All Agents</option></select>
+          <select class="fi" id="bdFilterStatus" onchange="applyBDFilter()">
             <option value="">All Status</option>
             <option>Closed</option><option>Completed</option><option>Booked</option>
           </select>
-          <input type="date" class="fi" id="bdFilterDateFrom" onchange="renderBD()" placeholder="From">
-          <input type="date" class="fi" id="bdFilterDateTo" onchange="renderBD()" placeholder="To">
+          <input type="date" class="fi" id="bdFilterDateFrom" onchange="applyBDFilter()" placeholder="From">
+          <input type="date" class="fi" id="bdFilterDateTo" onchange="applyBDFilter()" placeholder="To">
           <button class="btn btn-s btn-sm" onclick="clearBDFilters()">✕ Clear</button>
           <span style="font-size:10px;color:var(--text3)" id="bdRowCount"></span>
         </div>
@@ -1044,6 +1044,18 @@ function addBDRow(){
 }
 
 // ═══ BD RENDER ═══
+// Wrapper: activa Global View automáticamente si no hay branch seleccionada
+function applyBDFilter(){
+  if(!isGlobalView && !currBranch){
+    // Auto-activar Global View para que los filtros tengan datos
+    isGlobalView=true;
+    currBranch=null;
+    document.getElementById('bdBranchTitle').textContent='🌐 Global View — All Branches';
+    buildBDSidebar();
+  }
+  renderBD();
+}
+
 function clearBDFilters(){
   ['bdFilterWeek','bdFilterBranch','bdFilterAgent','bdFilterStatus','bdFilterDateFrom','bdFilterDateTo'].forEach(id=>{document.getElementById(id).value='';});
   document.querySelectorAll('.col-filter').forEach(el=>el.value='');
@@ -1118,7 +1130,7 @@ function renderBD(){
     filtered.map(({r,b,i},fi)=>{
       const oi=i;
       const inv=r.invoice;
-      const invHTML=inv==='ok'?(r.invoiceLink?`<a href="${escHtml(r.invoiceLink)}" target="_blank" style="color:var(--green)">✗</a>`:`<span style="color:var(--red);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">✔</span>`):inv==='bad'?`<span style="color:var(--green);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">✗</span>`:`<span style="color:var(--text3);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">—</span>`;
+      const invHTML=inv==='ok'?(r.invoiceLink?`<a href="${escHtml(r.invoiceLink)}" target="_blank" style="color:var(--green)">✔</a>`:`<span style="color:var(--green);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">✔</span>`):inv==='bad'?`<span style="color:var(--red);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">✗</span>`:`<span style="color:var(--text3);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">—</span>`;
       const diffStr=String(r.difference||'');
       const hasDiff=diffStr!==''&&diffStr!=='✓'&&Math.abs(parseFloat(diffStr))>=0.01;
       const priceEval=evalPriceFormula(String(r.price||''),oi);
