@@ -282,6 +282,15 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
         <span style="font-size:10.5px;color:var(--text3)" id="rowCount">0 jobs</span>
       </div>
     </div>
+    <!-- CSAT STATUS FILTER BAR -->
+    <div class="bd-status-bar">
+      <span class="slbl">Mostrar:</span>
+      <label style="color:var(--green)"><input type="checkbox" id="csatChkClosed" checked onchange="renderTable()" style="accent-color:var(--green)"> Closed</label>
+      <label style="color:var(--accent)"><input type="checkbox" id="csatChkCompleted" checked onchange="renderTable()" style="accent-color:var(--accent)"> Completed</label>
+      <label style="color:#5b9cf6"><input type="checkbox" id="csatChkBooked" checked onchange="renderTable()" style="accent-color:#5b9cf6"> Booked</label>
+      <label style="color:var(--text3)"><input type="checkbox" id="csatChkOpportunity" onchange="renderTable()"> Opportunity</label>
+      <label style="color:var(--red)"><input type="checkbox" id="csatChkLost" onchange="renderTable()"> Lost / Cancelled</label>
+    </div>
     <div class="csat-wrap" style="padding:0 0 4px">
       <table class="csat" id="csatTable">
         <thead><tr>
@@ -721,7 +730,8 @@ function importData(){
     if(cols.length<3)continue;
     const g=k=>idx[k]!==-1?(cols[idx[k]]||'').trim().replace(/^"|"$/g,''):'';
     const status=g('status');
-    if(['Lost','Cancelled','Opportunity'].includes(status))continue;
+    // Status filtering handled in renderTable via checkboxes — import all statuses
+    if(!status)continue;
     const d=parseDate(g('date'));if(!d)continue;
     const jobNum=g('jobNumber');
     const obj={date:d,rawDate:d,branch:g('branch')||'N/A',customer:g('customer')||'N/A',
@@ -816,7 +826,23 @@ function renderTable(){
   const rf=document.getElementById('filterRep').value;
   const hf=document.getElementById('filterHour').value;
   const sf=(document.getElementById('csatSortField')||{}).value||'date';
-  let jobs=[...allJobs].filter(j=>!hiddenBranches.has(j.branch));
+  // Status checkboxes
+  const csatShowClosed=document.getElementById('csatChkClosed')?.checked??true;
+  const csatShowCompleted=document.getElementById('csatChkCompleted')?.checked??true;
+  const csatShowBooked=document.getElementById('csatChkBooked')?.checked??true;
+  const csatShowOpportunity=document.getElementById('csatChkOpportunity')?.checked??false;
+  const csatShowLost=document.getElementById('csatChkLost')?.checked??false;
+
+  let jobs=[...allJobs].filter(j=>{
+    if(hiddenBranches.has(j.branch))return false;
+    const s=j.status||'';
+    if(s==='Closed'&&!csatShowClosed)return false;
+    if(s==='Completed'&&!csatShowCompleted)return false;
+    if(s==='Booked'&&!csatShowBooked)return false;
+    if(s==='Opportunity'&&!csatShowOpportunity)return false;
+    if((s==='Lost'||s==='Cancelled')&&!csatShowLost)return false;
+    return true;
+  });
   jobs.sort((a,b)=>{
     let av='',bv='';
     if(sf==='customer'){av=a.customer;bv=b.customer;}
