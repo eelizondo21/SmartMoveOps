@@ -1286,10 +1286,15 @@ function exportBDWeekXLSX(){
 function exportBreakdownXLSX(){
   const branch=document.getElementById('expBranch').value;
   const week=document.getElementById('expWeek').value;
-  const branches=branch?[branch]:ALL_BRANCHES.filter(b=>bdData[b]&&bdData[b].length);
+  const HQ_BRANCHES=['Wilson','Raleigh','Greenville'];
+  let branches;
+  if(branch==='HQ')branches=HQ_BRANCHES;
+  else if(branch)branches=[branch];
+  else branches=ALL_BRANCHES.filter(b=>bdData[b]&&bdData[b].length);
   let rows=[];
   branches.forEach(b=>(bdData[b]||[]).filter(r=>!week||String(r.w)===String(week)).forEach(r=>rows.push(r)));
-  writeXLSX(bdRowsToData(rows),buildXLSXFilename(branch||'ALL',week));
+  const label=branch==='HQ'?'HQ_WIL-RAL-GVL':(branch||'ALL');
+  writeXLSX(bdRowsToData(rows),buildXLSXFilename(label,week));
 }
 
 // ═══ REPORTS ═══
@@ -1334,7 +1339,13 @@ function buildReports(){
 // ═══ EXPORT ═══
 function buildExpBranches(){
   const eb=document.getElementById('expBranch');
-  if(eb.options.length<=1){ALL_BRANCHES.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;eb.appendChild(o);});}
+  if(eb.options.length<=1){
+    // HQ special option first
+    const hq=document.createElement('option');
+    hq.value='HQ';hq.textContent='🏠 HQ (Wilson + Raleigh + Greenville)';
+    eb.appendChild(hq);
+    ALL_BRANCHES.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;eb.appendChild(o);});
+  }
 }
 function buildExpWeeks(){
   const wks=[...new Set(allJobs.map(j=>j.week).filter(Boolean))].sort((a,b)=>a-b);
