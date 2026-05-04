@@ -354,6 +354,7 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
           <label style="color:var(--accent)"><input type="checkbox" id="chkCompleted" checked onchange="renderBD()" style="accent-color:var(--accent)"> Completed</label>
           <label style="color:#5b9cf6"><input type="checkbox" id="chkBooked" checked onchange="renderBD()" style="accent-color:#5b9cf6"> Booked</label>
           <label style="color:var(--text3)"><input type="checkbox" id="chkOpportunity" onchange="renderBD()"> Opportunity</label>
+          <label style="color:var(--red)"><input type="checkbox" id="chkLost" onchange="renderBD()"> Lost / Cancelled</label>
         </div>
         <div class="formula-bar">
           <span class="fx-ref" id="cellRef">—</span>
@@ -1048,6 +1049,7 @@ function clearBDFilters(){
   document.querySelectorAll('.col-filter').forEach(el=>el.value='');
   ['chkClosed','chkCompleted','chkBooked'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=true;});
   const opp=document.getElementById('chkOpportunity');if(opp)opp.checked=false;
+  const lost=document.getElementById('chkLost');if(lost)lost.checked=false;
   renderBD();
 }
 function getColFilters(){
@@ -1074,6 +1076,7 @@ function renderBD(){
   const showCompleted=document.getElementById('chkCompleted')?.checked??true;
   const showBooked=document.getElementById('chkBooked')?.checked??true;
   const showOpportunity=document.getElementById('chkOpportunity')?.checked??false;
+  const showLost=document.getElementById('chkLost')?.checked??false;
 
   let filtered=allBranchRows.filter(({r})=>{
     if(wf&&String(r.w)!==String(wf))return false;
@@ -1089,6 +1092,7 @@ function renderBD(){
     if(s==='Completed'&&!showCompleted)return false;
     if(s==='Booked'&&!showBooked)return false;
     if(s==='Opportunity'&&!showOpportunity)return false;
+    if((s==='Lost'||s==='Cancelled')&&!showLost)return false;
     return true;
   });
   if(bdSortCol){
@@ -1290,9 +1294,19 @@ function exportBreakdownXLSX(){
   let branches;
   if(branch==='HQ')branches=HQ_BRANCHES;
   else if(branch)branches=[branch];
-  else branches=ALL_BRANCHES.filter(b=>bdData[b]&&bdData[b].length);
+  else branches=ALL_BRANCHES;
+
+  // For each branch: use bdData if it exists and has rows,
+  // otherwise fall back to building rows from allJobs
   let rows=[];
-  branches.forEach(b=>(bdData[b]||[]).filter(r=>!week||String(r.w)===String(week)).forEach(r=>rows.push(r)));
+  branches.forEach(b=>{
+    let branchRows=bdData[b]&&bdData[b].length?bdData[b]:
+      allJobs.filter(j=>j.branch===b&&(j.status||'')!=='Opportunity').map(j=>createBDRow(j));
+    branchRows
+      .filter(r=>!week||String(r.w)===String(week))
+      .forEach(r=>rows.push(r));
+  });
+
   const label=branch==='HQ'?'HQ_WIL-RAL-GVL':(branch||'ALL');
   writeXLSX(bdRowsToData(rows),buildXLSXFilename(label,week));
 }
