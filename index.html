@@ -766,7 +766,7 @@ function importData(){
     const d=parseDate(g('date'));if(!d)continue;
     const jobNum=g('jobNumber');
     const obj={date:d,rawDate:d,branch:g('branch')||'N/A',customer:g('customer')||'N/A',
-      jobNumber:jobNum,status,startTime:normalizeTime(g('startTime')),
+      jobNumber:jobNum,status,startTime:convertUTCtoLocal(g('startTime'),g('branch')),
       totalEstCost:g('totalEstCost'),totalActCost:g('totalActCost'),creditCardFee:g('creditCardFee'),
       salesperson:g('salesperson'),referral:g('referral'),tip:g('tip'),
       crew:g('crew'),hours:g('hours'),laborCost:g('laborCost'),materials:g('materials'),fuel:g('fuel'),
@@ -804,12 +804,45 @@ function parseDate(s){
   m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return s.slice(0,10);
   return null;
 }
-function normalizeTime(v){
-  v=String(v||'').trim();if(!v)return '';
-  const m=v.match(/T(\d{2}):(\d{2})/);
-  if(m){let h=parseInt(m[1]);const mn=m[2];const ap=h>=12?'pm':'am';h=h%12||12;return `${h}:${mn}${ap}`;}
-  if(/^\d{1,2}:\d{2}/.test(v))return v;return v;
+// Returns the IANA timezone for a given branch
+function getBranchTZ(branch){
+  if(['Asheville','Charlotte','Raleigh','Wilmington','Wilson','Greenville'].includes(branch))
+    return 'America/New_York';
+  if(['Wichita Falls','Dallas','Nashville'].includes(branch))
+    return 'America/Chicago';
+  if(branch==='Denver')return 'America/Denver';
+  if(branch==='Phoenix')return 'America/Phoenix';
+  if(branch==='Las Vegas')return 'America/Los_Angeles';
+  return 'America/Chicago'; // default
 }
+
+// Converts UTC timestamp from SmartMoving CSV to branch local time (e.g. "9:00am")
+function convertUTCtoLocal(utcStr, branch){
+  if(!utcStr)return '';
+  // If already looks like a formatted time (e.g. "9:00am"), keep it
+  if(/^\d{1,2}:\d{2}/.test(String(utcStr).trim()))return utcStr.trim();
+  // Extract UTC hour/min from ISO string
+  const m=String(utcStr).match(/T(\d{2}):(\d{2})/);
+  if(!m)return '';
+  try{
+    // Parse as a proper Date and convert to branch timezone
+    const dateStr=utcStr.replace('Z','').replace(' ','T')+'Z';
+    const d=new Date(dateStr);
+    if(isNaN(d))throw new Error('bad date');
+    const tz=getBranchTZ(branch);
+    let localStr=d.toLocaleTimeString('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit',hour12:true});
+    // Normalize: "9:00 AM" -> "9:00am"
+    return localStr.toLowerCase().replace(' ','');
+  }catch(e){
+    // Fallback: just format UTC hour as-is
+    let h=parseInt(m[1]);const mn=m[2];
+    const ap=h>=12?'pm':'am';h=h%12||12;
+    return `${h}:${mn}${ap}`;
+  }
+}
+
+// Keep for backward compatibility
+function normalizeTime(v){return convertUTCtoLocal(v,'');}
 let _ri=0;
 function assignRep(j){const n=parseInt((j.jobNumber||'').replace(/\D/g,''))||(_ri++);return REPS[n%REPS.length];}
 
@@ -906,8 +939,13 @@ function renderTable(){
     const cbcls=!cl.type?'cn':(cl.type==='minor'?'cm':'cmj');
     const cbTxt=!cl.type?'—':`⚠️ ${cl.type}${cl.resolver?' · '+cl.resolver:''}`;
     const hasNote=d.notes&&d.notes.trim();
-    const escJN=j.jobNumber.replace(/'/g,"\\'");
-    return `<tr>
+    const escJN=j.jobNumber.replace(/'/g,"\'");
+    // Amber highlight: MMC not done and date is today or past
+    const mmcDone=d.mmcStatus&&d.mmcStatus!=='';
+    const isPast=j.date&&j.date<=todayISO();
+    const pendingMmc=!mmcDone&&isPast;
+    const rowStyle=pendingMmc?'background:rgba(245,200,66,0.08);border-left:3px solid rgba(245,200,66,0.55)':'';
+    return `<tr style="${rowStyle}">
       <td style="color:var(--text2)">${fmtDate(j.date)}</td>
       <td><span class="bp ${bc}">${j.branch}</span></td>
       <td style="font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis">${escHtml(j.customer)}</td>
