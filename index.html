@@ -239,6 +239,15 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
         <button class="btn btn-s" onclick="clearAll()">🗑 Clear</button>
         <button class="btn btn-s btn-sm" onclick="loadDemo()">🎭 Demo</button>
       </div>
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+        <div class="card-lbl" style="margin-bottom:4px">🕐 Pegar hora del Bookmarklet</div>
+        <p style="font-size:10.5px;color:var(--text3);margin-bottom:6px">
+          Corre el bookmarklet en SmartMoving → copia → pega aquí. Auto-rellena la hora en Time.
+        </p>
+        <textarea class="import-area" id="timeImportArea" rows="3"
+          placeholder="Pega aquí el resultado del bookmarklet (una línea por trabajo)&#10;Formato: hora &lt;tabs&gt; hora_local&#10;JobNum &lt;tab&gt; ..."></textarea>
+        <button class="btn btn-p btn-sm" style="margin-top:6px" onclick="importBookmarkletTimes()">🕐 Cargar horas</button>
+      </div>
     </div>
     <div class="card card-g">
       <div class="card-header"><span class="card-lbl">🔍 Filters</span></div>
@@ -755,16 +764,6 @@ function importData(){
     laborCost:find('estimated labor cost','labor cost'),materials:find('estimated materials cost','materials'),
     fuel:find('estimated fuel surcharges cost','fuel'),
   };
-  // Debug: muestra los primeros headers para diagnosticar columnas
-  const timeIdx=idx.startTime;
-  if(timeIdx===-1){
-    toast('⚠️ Columna de hora no encontrada. Headers: '+headers.slice(0,12).join(' | '),'err');
-  } else {
-    // Show sample value from first data row
-    const sampleCols=splitLine(lines[1],sep);
-    const sampleVal=sampleCols[timeIdx]||'(vacío)';
-    toast('🕐 Hora encontrada en col "'+headers[timeIdx]+'" → valor: '+sampleVal,'ok');
-  }
   const newJobs=[];
   for(let i=1;i<lines.length;i++){
     const cols=splitLine(lines[i],sep);
@@ -1446,6 +1445,57 @@ function dlCSV(rows,fn){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
   a.download=fn;a.click();toast('Download started ✓','ok');
+}
+
+// ═══ BOOKMARKLET TIME IMPORT ═══
+function importBookmarkletTimes(){
+  const raw=document.getElementById('timeImportArea').value.trim();
+  if(!raw){toast('Pega el resultado del bookmarklet primero','err');return;}
+  const lines=raw.split('\n').filter(l=>l.trim());
+  let updated=0,notFound=0;
+  lines.forEach(line=>{
+    const cols=line.split('\t');
+    if(cols.length<7)return;
+    const utcHour=parseInt(cols[0]);  // hora UTC del trabajo
+    const mmcHour=parseInt(cols[5]);  // hora local +2 (la MMC sugerida)
+    const jobNum=(cols[6]||'').trim();
+    const ndccRep=(cols[7]||'').trim();
+    const mmcRep=(cols[9]||'').trim();
+    const star=(cols[10]||'').trim();
+    if(!jobNum||isNaN(utcHour))return;
+
+    // Find the job to get the branch timezone
+    const job=smLookup[jobNum];
+    const branch=job?job.branch:'';
+    let localHour=utcHour;
+    try{
+      // Convert UTC hour to branch local time using same logic as getBranchTZ
+      const tz=getBranchTZ(branch);
+      const now=new Date();
+      const testDate=new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate(),utcHour,0,0));
+      const localStr=testDate.toLocaleTimeString('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit',hour12:true});
+      const localFormatted=localStr.toLowerCase().replace(' ','');
+      // Store local time as the start time for the job
+      if(!csatData[jobNum])csatData[jobNum]={ndccRep:'',ndccStatus:'',mmcRep:'',mmcStatus:'',notes:'',claim:null,manualTime:''};
+      csatData[jobNum].manualTime=localFormatted;
+      // Also update reps if bookmarklet provided them and they're not already set
+      if(ndccRep&&!csatData[jobNum].ndccRep)csatData[jobNum].ndccRep=ndccRep;
+      if(mmcRep&&!csatData[jobNum].mmcRep)csatData[jobNum].mmcRep=mmcRep;
+      if(star&&!csatData[jobNum].mmcStatus)csatData[jobNum].mmcStatus=star;
+      updated++;
+    }catch(e){
+      // Fallback: use mmcHour - 2 as the start time
+      const startH=isNaN(mmcHour)?utcHour:Math.max(0,mmcHour-2);
+      const ap=startH>=12?'pm':'am';const h12=startH%12||12;
+      if(!csatData[jobNum])csatData[jobNum]={ndccRep:'',ndccStatus:'',mmcRep:'',mmcStatus:'',notes:'',claim:null,manualTime:''};
+      csatData[jobNum].manualTime=`${h12}:00${ap}`;
+      updated++;
+    }
+    if(!job)notFound++;
+  });
+  document.getElementById('timeImportArea').value='';
+  saveState();renderTable();
+  toast(`🕐 ${updated} horas actualizadas${notFound?' ('+notFound+' jobs no encontrados en el log)':''}`, updated>0?'ok':'err');
 }
 
 // ═══ OUTSTANDING BALANCES ═══
