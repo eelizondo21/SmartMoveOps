@@ -1430,7 +1430,6 @@ function buildReports(){
         <button onclick="resolveClaim('${item.jobNumber.replace(/'/g,"\\'")}')" title="Marcar como resuelta" style="background:var(--rdim);border:1px solid var(--red);color:var(--red);border-radius:4px;padding:1px 7px;cursor:pointer;font-size:12px;font-weight:700;line-height:1.4">✕</button>
       </span>
     </div>`).join(''):'<div style="color:var(--text3);font-size:11.5px">No open claims</div>'}</div>`;
-  document.getElementById('repGrid').innerHTML=
   const makeCard=(title,rows)=>`<div class="rep-card"><h3>${title}</h3>${rows.length?rows.map(([k,v])=>`<div class="rep-row"><span>${escHtml(String(k))}</span><span class="rep-num">${v}</span></div>`).join(''):'<div style="color:var(--text3);font-size:11.5px">No data</div>'}</div>`;
   document.getElementById('repGrid').innerHTML=
     makeCard('📦 Jobs Booked by Rep',Object.entries(bookedBy).sort((a,b)=>b[1]-a[1]).slice(0,10))+
