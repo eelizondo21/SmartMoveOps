@@ -1056,6 +1056,11 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 // ═══ BD SIDEBAR ═══
 function buildBDSidebar(){
+  // Save current filter values before rebuilding dropdowns
+  const savedWeek=document.getElementById('bdFilterWeek').value;
+  const savedBranch=document.getElementById('bdFilterBranch').value;
+  const savedAgent=document.getElementById('bdFilterAgent').value;
+
   const cnt={};ALL_BRANCHES.forEach(b=>cnt[b]=0);
   allJobs.filter(j=>j.status!=='Opportunity').forEach(j=>{if(cnt[j.branch]!==undefined)cnt[j.branch]++;});
   document.getElementById('bdSidebar').innerHTML=ALL_BRANCHES.map(b=>`
@@ -1067,13 +1072,13 @@ function buildBDSidebar(){
   const wks=[...new Set(allJobs.map(j=>j.week).filter(Boolean))].sort((a,b)=>a-b);
   const curYear=new Date().getFullYear();
   const wf=document.getElementById('bdFilterWeek');
-  wf.innerHTML='<option value="">All Weeks</option>'+wks.map(w=>`<option value="${w}">Week ${w} — ${getWeekRangeLabel(w,curYear)}</option>`).join('');
+  wf.innerHTML='<option value="">All Weeks</option>'+wks.map(w=>`<option value="${w}"${String(w)===String(savedWeek)?' selected':''}>Week ${w} — ${getWeekRangeLabel(w,curYear)}</option>`).join('');
   const bf=document.getElementById('bdFilterBranch');
-  bf.innerHTML='<option value="">All Branches</option><option value="HQ">HQ</option>';
-  ALL_BRANCHES.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;bf.appendChild(o);});
+  bf.innerHTML='<option value="">All Branches</option><option value="HQ"'+(savedBranch==='HQ'?' selected':'')+'>HQ</option>';
+  ALL_BRANCHES.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;if(b===savedBranch)o.selected=true;bf.appendChild(o);});
   const af=document.getElementById('bdFilterAgent');
   af.innerHTML='<option value="">All Agents</option>';
-  REPS.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;af.appendChild(o);});
+  REPS.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;if(r===savedAgent)o.selected=true;af.appendChild(o);});
   buildExpBranches();buildExpWeeks();
   setupBDHeaderSort();
 }
@@ -1206,7 +1211,10 @@ function renderBD(){
     filtered.map(({r,b,i},fi)=>{
       const oi=i;
       const inv=r.invoice;
-      const invHTML=inv==='ok'?(r.invoiceLink?`<a href="${escHtml(r.invoiceLink)}" target="_blank" style="color:var(--green)">✔</a>`:`<span style="color:var(--green);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">✔</span>`):inv==='bad'?`<span style="color:var(--red);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">✗</span>`:`<span style="color:var(--text3);cursor:pointer" onclick="toggleInvoice('${b}',${oi})">—</span>`;
+      const invHTML=r.invoiceLink?
+        `<span style="display:inline-flex;align-items:center;gap:3px"><a href="${escHtml(r.invoiceLink)}" target="_blank" style="color:var(--green);font-weight:700;text-decoration:none" title="Abrir invoice">✔</a><span style="cursor:pointer;color:var(--text3);font-size:10px" onclick="toggleInvoice('${b}',${oi})" title="Editar / borrar link">✎</span></span>`:
+        inv==='ok'?`<span style="color:var(--green);cursor:pointer" onclick="toggleInvoice('${b}',${oi})" title="Agregar link o borrar">✔</span>`:
+        `<span style="color:var(--text3);cursor:pointer" onclick="toggleInvoice('${b}',${oi})" title="Marcar invoice">—</span>`;
       const diffStr=String(r.difference||'');
       const hasDiff=diffStr!==''&&diffStr!=='✓'&&Math.abs(parseFloat(diffStr))>=0.01;
       const priceEval=evalPriceFormula(String(r.price||''),oi);
@@ -1243,10 +1251,25 @@ function renderBD(){
 
 function toggleInvoice(branch,i){
   if(!branch)branch=currBranch;const r=bdData[branch]?.[i];if(!r)return;
-  if(!r.invoice)r.invoice='ok';
-  else if(r.invoice==='ok'){const lk=prompt('Paste invoice URL (leave blank to skip):');if(lk)r.invoiceLink=lk;r.invoice='bad';}
-  else{r.invoice='';r.invoiceLink='';}
-  renderBD();
+  if(!r.invoice){
+    // — → prompt for URL, mark as ok
+    const lk=prompt('Paste invoice URL (leave blank to mark without link):');
+    r.invoice='ok';
+    if(lk&&lk.trim())r.invoiceLink=lk.trim();
+  }else if(r.invoice==='ok'&&r.invoiceLink){
+    // Has link → ✎ edit: re-prompt or clear
+    const lk=prompt('Edit invoice URL (leave blank to clear):',r.invoiceLink);
+    if(lk===null)return; // cancelled
+    if(lk.trim()){r.invoiceLink=lk.trim();}
+    else{r.invoice='';r.invoiceLink='';}
+  }else if(r.invoice==='ok'){
+    // ✔ no link → prompt for URL or clear
+    const lk=prompt('Paste invoice URL (leave blank to clear mark):');
+    if(lk===null)return;
+    if(lk.trim()){r.invoiceLink=lk.trim();}
+    else{r.invoice='';r.invoiceLink='';}
+  }else{r.invoice='';r.invoiceLink='';}
+  renderBD();saveState();
 }
 function saveBD(){
   document.querySelectorAll('#bdBody tr[data-oi]').forEach(row=>{
@@ -1486,8 +1509,84 @@ async function exportCSATXLSX(){
   if(rf)jobs=jobs.filter(j=>{const d=csatData[j.jobNumber]||{};return d.ndccRep===rf||d.mmcRep===rf;});
   if(typeof ExcelJS==='undefined'){toast('ExcelJS no disponible','err');return;}
   const wb=new ExcelJS.Workbook();
-  const ws=wb.addWorksheet('CSAT Report');
-  const cols=[
+
+  // ── SHEET 1: SUMMARY BY REP ──
+  const ws=wb.addWorksheet('Summary by Rep');
+  const hdrStyle=(cell,color='FFF2F2F2')=>{
+    cell.font={bold:true};
+    cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:color}};
+    cell.border={bottom:{style:'thin',color:{argb:'FFCCCCCC'}}};
+    cell.alignment={horizontal:'center',vertical:'middle'};
+  };
+  // Title
+  ws.mergeCells('A1:Q1');
+  const titleCell=ws.getCell('A1');
+  titleCell.value=`Smart Move · CSAT Summary${mf?' — '+mf:''}${rf?' — '+rf:''}`;
+  titleCell.font={bold:true,size:13};titleCell.alignment={horizontal:'center'};
+  ws.getRow(1).height=22;
+
+  // Headers row 2
+  const headers=['Rep','Jobs Assigned','Jobs Booked',
+    'NDCC Done','NDCC ✅','NDCC 📬','NDCC ❓','NDCC ✗',
+    'MMC Done','MMC ✅','MMC 📬','MMC ❓','MMC 💬','MMC ⭐',
+    'Claims','Open Claims','Completion %'];
+  ws.getRow(2).values=['','', ...headers];
+  // Actually let me redo headers cleanly
+  ws.getRow(2).values=headers;
+  ws.columns=[
+    {key:'rep',width:16},{key:'assigned',width:14},{key:'booked',width:13},
+    {key:'ndccDone',width:11},{key:'ndcc_ok',width:10},{key:'ndcc_bz',width:10},
+    {key:'ndcc_q',width:10},{key:'ndcc_x',width:10},
+    {key:'mmcDone',width:11},{key:'mmc_ok',width:10},{key:'mmc_bz',width:10},
+    {key:'mmc_q',width:10},{key:'mmc_chat',width:10},{key:'mmc_star',width:10},
+    {key:'claims',width:10},{key:'openClaims',width:12},{key:'pct',width:13}
+  ];
+  ws.getRow(2).values=headers;
+  ws.getRow(2).eachCell(cell=>hdrStyle(cell,'FFFFE8CC'));
+  ws.getRow(2).height=18;
+
+  // Build stats per rep
+  const allReps=[...new Set([...REPS,...jobs.flatMap(j=>{const d=csatData[j.jobNumber]||{};return[d.ndccRep,d.mmcRep].filter(Boolean);})])];
+  let totRow={rep:'TOTAL',assigned:0,booked:0,ndccDone:0,ndcc_ok:0,ndcc_bz:0,ndcc_q:0,ndcc_x:0,mmcDone:0,mmc_ok:0,mmc_bz:0,mmc_q:0,mmc_chat:0,mmc_star:0,claims:0,openClaims:0,pct:''};
+
+  allReps.forEach((rep,ri)=>{
+    const ndccJobs=jobs.filter(j=>(csatData[j.jobNumber]||{}).ndccRep===rep);
+    const mmcJobs=jobs.filter(j=>(csatData[j.jobNumber]||{}).mmcRep===rep);
+    const assigned=[...new Set([...ndccJobs,...mmcJobs].map(j=>j.jobNumber))].length;
+    const booked=jobs.filter(j=>j.salesperson&&j.salesperson.toLowerCase().includes(rep.toLowerCase())).length;
+    const ndccDone=ndccJobs.filter(j=>(csatData[j.jobNumber]||{}).ndccStatus&&(csatData[j.jobNumber]||{}).ndccStatus!=='').length;
+    const ndcc_ok=ndccJobs.filter(j=>(csatData[j.jobNumber]||{}).ndccStatus==='✅').length;
+    const ndcc_bz=ndccJobs.filter(j=>(csatData[j.jobNumber]||{}).ndccStatus==='📬').length;
+    const ndcc_q=ndccJobs.filter(j=>(csatData[j.jobNumber]||{}).ndccStatus==='❓').length;
+    const ndcc_x=ndccJobs.filter(j=>(csatData[j.jobNumber]||{}).ndccStatus==='✗').length;
+    const mmcDone=mmcJobs.filter(j=>(csatData[j.jobNumber]||{}).mmcStatus&&(csatData[j.jobNumber]||{}).mmcStatus!=='').length;
+    const mmc_ok=mmcJobs.filter(j=>(csatData[j.jobNumber]||{}).mmcStatus==='✅').length;
+    const mmc_bz=mmcJobs.filter(j=>(csatData[j.jobNumber]||{}).mmcStatus==='📬').length;
+    const mmc_q=mmcJobs.filter(j=>(csatData[j.jobNumber]||{}).mmcStatus==='❓').length;
+    const mmc_chat=mmcJobs.filter(j=>(csatData[j.jobNumber]||{}).mmcStatus==='💬').length;
+    const mmc_star=mmcJobs.filter(j=>(csatData[j.jobNumber]||{}).mmcStatus==='⭐').length;
+    const claimsAll=jobs.filter(j=>(csatData[j.jobNumber]||{}).claim?.type&&((csatData[j.jobNumber]||{}).claim?.resolver===rep||(csatData[j.jobNumber]||{}).ndccRep===rep||(csatData[j.jobNumber]||{}).mmcRep===rep));
+    const claims=claimsAll.length;
+    const openClaims=claimsAll.filter(j=>(csatData[j.jobNumber]||{}).claim?.type).length;
+    const totalPossible=(ndccJobs.length+mmcJobs.length)||1;
+    const pct=Math.round((ndccDone+mmcDone)/totalPossible*100)+'%';
+    const rowData={rep,assigned,booked,ndccDone,ndcc_ok,ndcc_bz,ndcc_q,ndcc_x,mmcDone,mmc_ok,mmc_bz,mmc_q,mmc_chat,mmc_star,claims,openClaims,pct};
+    const row=ws.addRow(rowData);
+    if(ri%2===1)row.eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF9F9FB'}};});
+    row.getCell('rep').font={bold:true};
+    // Accumulate totals
+    ['assigned','booked','ndccDone','ndcc_ok','ndcc_bz','ndcc_q','ndcc_x','mmcDone','mmc_ok','mmc_bz','mmc_q','mmc_chat','mmc_star','claims','openClaims'].forEach(k=>totRow[k]+=rowData[k]||0);
+  });
+
+  // Totals row
+  ws.addRow({});
+  const tr=ws.addRow(totRow);
+  tr.font={bold:true};
+  tr.eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFE8CC'}};});
+
+  // ── SHEET 2: DETAIL ──
+  const ws2=wb.addWorksheet('Detail');
+  const cols2=[
     {header:'Date',key:'date',width:12},{header:'Branch',key:'branch',width:14},
     {header:'Customer',key:'customer',width:22},{header:'Job #',key:'jobNumber',width:12},
     {header:'Time',key:'time',width:10},{header:'Week',key:'week',width:6},
@@ -1497,36 +1596,19 @@ async function exportCSATXLSX(){
     {header:'Notes',key:'notes',width:24},{header:'Claim Type',key:'claimType',width:14},
     {header:'Claim Resolver',key:'claimResolver',width:16}
   ];
-  ws.columns=cols;
-  // Header styling
-  const hdr=ws.getRow(1);
-  hdr.font={bold:true};
-  hdr.eachCell(cell=>{
-    cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2F2F2'}};
-    cell.border={bottom:{style:'thin',color:{argb:'FFCCCCCC'}}};
-    cell.alignment={vertical:'middle'};
-  });
-  // Data rows
-  const statusColors={'✅':'FF22c55e','📬':'FF3b82f6','❓':'FFf59e0b','💬':'FF8b5cf6','⭐':'FFf5c842','✗':'FFef4444'};
+  ws2.columns=cols2;
+  const hdr2=ws2.getRow(1);hdr2.font={bold:true};
+  hdr2.eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2F2F2'}};cell.border={bottom:{style:'thin',color:{argb:'FFCCCCCC'}}};});
   jobs.forEach((j,idx)=>{
-    const d=csatData[j.jobNumber]||{};
-    const c=d.claim||{};
-    const row=ws.addRow({
-      date:j.date||'',branch:j.branch||'',customer:j.customer||'',
+    const d=csatData[j.jobNumber]||{};const c=d.claim||{};
+    const row=ws2.addRow({date:j.date||'',branch:j.branch||'',customer:j.customer||'',
       jobNumber:j.jobNumber||'',time:d.manualTime||j.startTime||'',week:j.week||'',
       status:j.status||'',ndccRep:d.ndccRep||'',ndccStatus:d.ndccStatus||'',
       mmcRep:d.mmcRep||'',mmcStatus:d.mmcStatus||'',
-      notes:d.notes||'',claimType:c.type||'',claimResolver:c.resolver||''
-    });
-    // Alternate row bg
+      notes:d.notes||'',claimType:c.type||'',claimResolver:c.resolver||''});
     if(idx%2===1)row.eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF9F9FB'}};});
   });
-  // Totals row
-  const ndccDone=jobs.filter(j=>(csatData[j.jobNumber]||{}).ndccStatus&&(csatData[j.jobNumber]||{}).ndccStatus!=='').length;
-  const mmcDone=jobs.filter(j=>(csatData[j.jobNumber]||{}).mmcStatus&&(csatData[j.jobNumber]||{}).mmcStatus!=='').length;
-  ws.addRow({});
-  const totRow=ws.addRow({date:'TOTALS',customer:`${jobs.length} jobs`,ndccStatus:`${ndccDone} NDCC done`,mmcStatus:`${mmcDone} MMC done`});
-  totRow.font={bold:true};totRow.getCell('date').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFE8CC'}};
+
   const label=rf?rf:(mf?mf:'All');
   const fname=`SmartMove_CSAT_${label}_${todayISO()}.xlsx`;
   const buffer=await wb.xlsx.writeBuffer();
