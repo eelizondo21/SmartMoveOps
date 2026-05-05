@@ -234,7 +234,7 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
   <div class="g2" style="margin-bottom:16px">
     <div class="card card-t">
       <div class="card-header"><span class="card-lbl">📥 Import SmartMoving Data</span></div>
-      <p style="font-size:11px;color:var(--text3);margin-bottom:8px">Paste CSV/TSV from app.smartmoving.com — ALL rows load (filters son opcionales)</p>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:8px">Paste CSV/TSV from app.smartmoving.com — ALL rows load (filters are optional)</p>
       <textarea class="import-area" id="importArea" placeholder="Paste all-jobs CSV/TSV here..."></textarea>
       <div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">
         <button class="btn btn-p" onclick="importData()">⚡ Process</button>
@@ -290,7 +290,7 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
     </div>
     <!-- CSAT STATUS FILTER BAR -->
     <div class="bd-status-bar">
-      <span class="slbl">Mostrar:</span>
+      <span class="slbl">Show:</span>
       <label style="color:var(--green)"><input type="checkbox" id="csatChkClosed" checked onchange="renderTable()" style="accent-color:var(--green)"> Closed</label>
       <label style="color:var(--accent)"><input type="checkbox" id="csatChkCompleted" checked onchange="renderTable()" style="accent-color:var(--accent)"> Completed</label>
       <label style="color:#5b9cf6"><input type="checkbox" id="csatChkBooked" checked onchange="renderTable()" style="accent-color:#5b9cf6"> Booked</label>
@@ -542,17 +542,17 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
     </div>
     <!-- USER MANAGEMENT — admin only -->
     <div class="fg" id="userMgmtSection" style="display:none;border-top:1px solid var(--border);padding-top:14px">
-      <label class="fl" style="font-size:11px;font-weight:700;color:var(--text)">👥 Acceso al Dashboard</label>
+      <label class="fl" style="font-size:11px;font-weight:700;color:var(--text)">👥 Dashboard Access</label>
       <div id="usersList" style="margin-bottom:12px;max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--bg3)"></div>
       <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px">
-        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">+ Agregar nuevo usuario</div>
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">+ Add new user</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
-          <input class="finp" id="newUserName" placeholder="Nombre (ej. Pablo)" style="flex:1;min-width:100px;font-size:11px;padding:5px 8px">
-          <input class="finp" id="newUserEmail" type="email" placeholder="correo@email.com" style="flex:2;min-width:160px;font-size:11px;padding:5px 8px">
+          <input class="finp" id="newUserName" placeholder="Name (e.g. Pablo)" style="flex:1;min-width:100px;font-size:11px;padding:5px 8px">
+          <input class="finp" id="newUserEmail" type="email" placeholder="email@address.com" style="flex:2;min-width:160px;font-size:11px;padding:5px 8px">
         </div>
         <div style="display:flex;gap:6px">
-          <input class="finp" id="newUserPwd" type="password" placeholder="Contraseña temporal" style="flex:1;font-size:11px;padding:5px 8px">
-          <button class="btn btn-p btn-sm" onclick="createNewUser()" style="white-space:nowrap">✚ Crear</button>
+          <input class="finp" id="newUserPwd" type="password" placeholder="Password" style="flex:1;font-size:11px;padding:5px 8px">
+          <button class="btn btn-p btn-sm" onclick="createNewUser()" style="white-space:nowrap">✚ Create</button>
         </div>
         <div id="newUserErr" style="font-size:11px;color:var(--red);margin-top:5px;min-height:16px"></div>
       </div>
@@ -619,7 +619,7 @@ function initFirebase(config){
     });
     _fbInit=true;
     setFbStatus(true);
-    toast('🔥 Firebase conectado — sync activo','ok');
+    toast('🔥 Firebase connected — live sync','ok');
   }catch(e){
     toast('Firebase error: '+e.message,'err');
     setFbStatus(false);
@@ -670,8 +670,8 @@ function setFbStatus(ok){
   const d=document.getElementById('fbStatusDiv');
   if(!d)return;
   d.innerHTML=ok?
-    '<span class="fb-badge on">🟢 Conectado — sync activo</span>':
-    '<span class="fb-badge off">⚪ Sin Firebase</span>';
+    '<span class="fb-badge on">🟢 Connected — live sync</span>':
+    '<span class="fb-badge off">⚪ Not connected</span>';
 }
 
 // ═══ WEEK CALC (Fri→Thu) ═══
@@ -1231,9 +1231,9 @@ function renderBD(){
       const oi=i;
       const inv=r.invoice;
       const invHTML=r.invoiceLink?
-        `<span style="display:inline-flex;align-items:center;gap:3px"><a href="${escHtml(r.invoiceLink)}" target="_blank" style="color:var(--green);font-weight:700;text-decoration:none" title="Abrir invoice">✔</a><span style="cursor:pointer;color:var(--text3);font-size:10px" onclick="toggleInvoice('${b}',${oi})" title="Editar / borrar link">✎</span></span>`:
-        inv==='ok'?`<span style="color:var(--green);cursor:pointer" onclick="toggleInvoice('${b}',${oi})" title="Agregar link o borrar">✔</span>`:
-        `<span style="color:var(--text3);cursor:pointer" onclick="toggleInvoice('${b}',${oi})" title="Marcar invoice">—</span>`;
+        `<span style="display:inline-flex;align-items:center;gap:3px"><a href="${escHtml(r.invoiceLink)}" target="_blank" style="color:var(--green);font-weight:700;text-decoration:none" title="Open invoice">✔</a><span style="cursor:pointer;color:var(--text3);font-size:10px" onclick="toggleInvoice('${b}',${oi})" title="Edit / remove link">✎</span></span>`:
+        inv==='ok'?`<span style="color:var(--green);cursor:pointer" onclick="toggleInvoice('${b}',${oi})" title="Add link or clear">✔</span>`:
+        `<span style="color:var(--text3);cursor:pointer" onclick="toggleInvoice('${b}',${oi})" title="Mark invoice">—</span>`;
       const diffStr=String(r.difference||'');
       const hasDiff=diffStr!==''&&diffStr!=='✓'&&Math.abs(parseFloat(diffStr))>=0.01;
       const priceEval=evalPriceFormula(String(r.price||''),oi);
@@ -1740,7 +1740,7 @@ function saveSettings(){
       localStorage.setItem('smv_fb_config',JSON.stringify(config));
       initFirebase(config);
     }catch(e){
-      toast('Firebase config inválido: '+e.message,'err');
+      toast('Invalid Firebase config: '+e.message,'err');
     }
   }
   closeModal('settingsModal');
@@ -1836,8 +1836,8 @@ async function doLogin(){
   const remember=document.getElementById('rememberMe').checked;
   const errEl=document.getElementById('loginErr');
   const btn=document.getElementById('loginBtn');
-  if(!email||!pwd){errEl.textContent='Ingresa tu correo y contraseña.';return;}
-  btn.disabled=true;btn.textContent='Entrando...';errEl.textContent='';
+  if(!email||!pwd){errEl.textContent='Please enter your email and password.';return;}
+  btn.disabled=true;btn.textContent='Signing in...';errEl.textContent='';
   try{
     // LOCAL = persiste aunque cierres el browser; SESSION = solo hasta cerrar pestaña
     const persistence=remember?
@@ -1847,12 +1847,12 @@ async function doLogin(){
     await _fbAuth.signInWithEmailAndPassword(email,pwd);
   }catch(e){
     errEl.textContent=['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-email'].includes(e.code)?
-      'Correo o contraseña incorrectos.':'Error: '+e.message;
-    btn.disabled=false;btn.textContent='Entrar';
+      'Incorrect email or password.':'Error: '+e.message;
+    btn.disabled=false;btn.textContent='Sign In';
   }
 }
 async function doLogout(){
-  if(!confirm('¿Cerrar sesión?'))return;
+  if(!confirm('Sign out?'))return;
   await _fbAuth.signOut();
   location.reload();
 }
@@ -1877,7 +1877,7 @@ async function checkAndRegisterUser(user){
     if(data&&data.disabled===true){
       await _fbAuth.signOut();
       showLoginScreen();
-      setTimeout(()=>{document.getElementById('loginErr').textContent='Tu acceso ha sido deshabilitado. Contacta al administrador.';},200);
+      setTimeout(()=>{document.getElementById('loginErr').textContent='Your access has been disabled. Contact your administrator.';},200);
       return false;
     }
     if(!data){
@@ -1897,7 +1897,7 @@ function onLoginSuccess(user){
       ui.innerHTML=`
         <span style="font-size:11px;color:var(--text2)">${escHtml(user.email)}</span>
         ${isAdmin?'<span style="font-size:9px;background:var(--aglow);color:var(--accent);padding:1px 7px;border-radius:8px;font-weight:700">ADMIN</span>':''}
-        <button class="btn btn-s btn-sm" onclick="doLogout()" style="font-size:10px;padding:3px 9px">↩ Salir</button>`;
+        <button class="btn btn-s btn-sm" onclick="doLogout()" style="font-size:10px;padding:3px 9px">↩ Sign Out</button>`;
     }
     applyRoleUI();
     hideLoginScreen();
@@ -1908,7 +1908,7 @@ function onLoginSuccess(user){
       allJobs=Object.values(archive);
       allJobs.forEach(j=>{if(j.jobNumber)smLookup[j.jobNumber]=j;});
       rebuildRepFilter();rebuildBranchFilter();renderRepTags();updateStats();checkRball();
-      if(allJobs.length>0){renderTable();setTimeout(()=>toast(`📂 ${allJobs.length} jobs cargados`,'ok'),400);}
+      if(allJobs.length>0){renderTable();setTimeout(()=>toast(`📂 ${allJobs.length} jobs loaded`,'ok'),400);}
       try{
         initFirebase(_FIREBASE_CONFIG);
         const fbInp=document.getElementById('fbConfigInput');
@@ -1932,7 +1932,7 @@ async function loadUsersForAdmin(){
   const ul=document.getElementById('usersList');
   if(!ul)return;
   const entries=Object.entries(users).sort((a,b)=>((a[1].name||'').localeCompare(b[1].name||'')));
-  if(!entries.length){ul.innerHTML='<div style="padding:12px;color:var(--text3);font-size:12px;text-align:center">No hay usuarios registrados aún.</div>';return;}
+  if(!entries.length){ul.innerHTML='<div style="padding:12px;color:var(--text3);font-size:12px;text-align:center">No users registered yet.</div>';return;}
   ul.innerHTML=entries.map(([uid,u])=>`
     <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px${u.disabled?';opacity:.5':''}">
       <span style="flex:1;min-width:0;overflow:hidden">
@@ -1942,8 +1942,8 @@ async function loadUsersForAdmin(){
       ${ADMIN_UIDS.has(uid)?'<span style="font-size:9px;background:var(--aglow);color:var(--accent);padding:1px 7px;border-radius:6px;font-weight:700">ADMIN</span>':''}
       ${ADMIN_UIDS.has(uid)?'':
         u.disabled?
-          `<button onclick="toggleUserAccess('${uid}',true)" class="btn btn-s btn-sm" style="font-size:10px;padding:2px 8px;color:var(--green);border-color:rgba(48,201,154,.4)">✔ Habilitar</button>`:
-          `<button onclick="toggleUserAccess('${uid}',false)" class="btn btn-s btn-sm" style="font-size:10px;padding:2px 8px;color:var(--red);border-color:rgba(232,80,80,.4)">✕ Deshabilitar</button>`
+          `<button onclick="toggleUserAccess('${uid}',true)" class="btn btn-s btn-sm" style="font-size:10px;padding:2px 8px;color:var(--green);border-color:rgba(48,201,154,.4)">✔ Enable</button>`:
+          `<button onclick="toggleUserAccess('${uid}',false)" class="btn btn-s btn-sm" style="font-size:10px;padding:2px 8px;color:var(--red);border-color:rgba(232,80,80,.4)">✕ Disable</button>`
       }
     </div>`).join('');
 }
@@ -1951,7 +1951,7 @@ async function loadUsersForAdmin(){
 async function toggleUserAccess(uid,currentlyDisabled){
   if(!_fbDB)return;
   await _fbDB.ref('smv/users/'+uid+'/disabled').set(!currentlyDisabled);
-  toast(!currentlyDisabled?'✕ Usuario deshabilitado — ya no podrá acceder':'✔ Usuario habilitado','ok');
+  toast(!currentlyDisabled?'✕ User disabled — access revoked':'✔ User enabled','ok');
   loadUsersForAdmin();
 }
 
@@ -1961,9 +1961,9 @@ async function createNewUser(){
   const pwd=document.getElementById('newUserPwd').value;
   const errEl=document.getElementById('newUserErr');
   errEl.textContent='';
-  if(!email||!pwd){errEl.textContent='Correo y contraseña son obligatorios.';return;}
-  if(pwd.length<6){errEl.textContent='La contraseña debe tener al menos 6 caracteres.';return;}
-  errEl.textContent='⏳ Creando usuario...';
+  if(!email||!pwd){errEl.textContent='Email and password are required.';return;}
+  if(pwd.length<6){errEl.textContent='Password must be at least 6 characters.';return;}
+  errEl.textContent='⏳ Creating user...';
   let tempApp=null;
   try{
     tempApp=firebase.initializeApp(_FIREBASE_CONFIG,'smv_tmp_'+Date.now());
@@ -1976,12 +1976,12 @@ async function createNewUser(){
     await tempApp.delete();
     ['newUserName','newUserEmail','newUserPwd'].forEach(id=>document.getElementById(id).value='');
     errEl.textContent='';
-    toast('✅ Usuario creado: '+email,'ok');
+    toast('✅ User created: '+email,'ok');
     loadUsersForAdmin();
   }catch(e){
     if(tempApp)try{tempApp.delete();}catch(ex){}
-    errEl.textContent=e.code==='auth/email-already-in-use'?'Ese correo ya está registrado.':
-      e.code==='auth/invalid-email'?'Correo inválido.':'Error: '+e.message;
+    errEl.textContent=e.code==='auth/email-already-in-use'?'That email is already registered.':
+      e.code==='auth/invalid-email'?'Invalid email.':'Error: '+e.message;
   }
 }
 
@@ -2039,23 +2039,23 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
     <div style="text-align:center;margin-bottom:28px">
       <img src="logo-fotor-bg-remover-2026050211141.png" style="height:54px;filter:drop-shadow(0 0 12px rgba(244,140,30,.4));margin-bottom:14px;display:block;margin-left:auto;margin-right:auto">
       <div style="font-size:18px;font-weight:700;color:var(--text)">Smart Move · Ops</div>
-      <div style="font-size:12px;color:var(--text3);margin-top:5px">Inicia sesión para continuar</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:5px">Sign in to continue</div>
     </div>
     <div style="margin-bottom:12px">
-      <label style="font-size:11px;color:var(--text3);margin-bottom:5px;display:block">Correo electrónico</label>
-      <input type="email" id="loginEmail" class="finp" placeholder="tu@correo.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('loginPwd').focus()">
+      <label style="font-size:11px;color:var(--text3);margin-bottom:5px;display:block">Email</label>
+      <input type="email" id="loginEmail" class="finp" placeholder="your@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('loginPwd').focus()">
     </div>
     <div style="margin-bottom:10px">
-      <label style="font-size:11px;color:var(--text3);margin-bottom:5px;display:block">Contraseña</label>
+      <label style="font-size:11px;color:var(--text3);margin-bottom:5px;display:block">Password</label>
       <input type="password" id="loginPwd" class="finp" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px;font-size:12px;color:var(--text2)">
       <input type="checkbox" id="rememberMe" checked style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer">
-      Mantener sesión iniciada
+      Keep me signed in
     </label>
     <div id="loginErr" style="font-size:11.5px;color:var(--red);min-height:18px;margin-bottom:12px;text-align:center"></div>
-    <button id="loginBtn" class="btn btn-p" style="width:100%;justify-content:center;padding:11px;font-size:13px" onclick="doLogin()">Entrar</button>
-    <div style="font-size:10.5px;color:var(--text3);text-align:center;margin-top:14px">¿Problemas para acceder? Contacta a tu administrador.</div>
+    <button id="loginBtn" class="btn btn-p" style="width:100%;justify-content:center;padding:11px;font-size:13px" onclick="doLogin()">Sign In</button>
+    <div style="font-size:10.5px;color:var(--text3);text-align:center;margin-top:14px">Having trouble? Contact your administrator.</div>
   </div>
 </div>
 
