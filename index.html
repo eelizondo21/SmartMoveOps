@@ -425,8 +425,12 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
   <div class="page-sub">Download by week, branch, or full dataset</div>
   <div class="g2" style="margin-bottom:16px">
     <div class="card card-t">
-      <div class="card-lbl" style="margin-bottom:10px">📋 Export CSAT Log</div>
-      <button class="btn btn-p" onclick="exportCSAT()">⬇️ Download CSV</button>
+      <div class="card-lbl" style="margin-bottom:10px">📋 Export CSAT Report .xlsx</div>
+      <div style="display:flex;gap:7px;margin-bottom:8px;flex-wrap:wrap">
+        <select class="fi" id="expCSATMonth" style="flex:1"><option value="">All Months</option></select>
+        <select class="fi" id="expCSATRep" style="flex:1"><option value="">All Reps</option></select>
+      </div>
+      <button class="btn btn-p" onclick="exportCSATXLSX()">⬇️ Download .xlsx</button>
     </div>
     <div class="card card-g">
       <div class="card-lbl" style="margin-bottom:10px">🧾 Export Breakdowns .xlsx</div>
@@ -1039,6 +1043,14 @@ function saveClaim(){
   csatData[jn].claim={type:document.getElementById('claimType').value,resolver:document.getElementById('claimResolver').value,notes:document.getElementById('claimNotes').value};
   closeModal('claimModal');renderTable();saveState();toast('Claim saved','ok');
 }
+function resolveClaim(jn){
+  if(!csatData[jn])return;
+  csatData[jn].claim=null;
+  saveState();renderTable();
+  const cur=document.querySelector('.page.active');
+  if(cur&&cur.id==='page-reports')buildReports();
+  toast('✅ Claim resolved — removed from Reports','ok');
+}
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
@@ -1408,14 +1420,23 @@ function buildReports(){
   jobs.forEach(j=>{const d=csatData[j.jobNumber]||{};if(d.mmcStatus&&d.mmcStatus!=='')mmcBy[d.mmcRep||'?']=(mmcBy[d.mmcRep||'?']||0)+1;});
   const ndccBy={};REPS.forEach(r=>ndccBy[r]=0);
   jobs.forEach(j=>{const d=csatData[j.jobNumber]||{};if(d.ndccStatus&&d.ndccStatus!=='')ndccBy[d.ndccRep||'?']=(ndccBy[d.ndccRep||'?']||0)+1;});
-  const claimTypes={};
-  jobs.forEach(j=>{const c=(csatData[j.jobNumber]||{}).claim;if(c&&c.type)claimTypes[c.type]=(claimTypes[c.type]||0)+1;});
+  const claimItems=[];
+  jobs.forEach(j=>{const c=(csatData[j.jobNumber]||{}).claim;if(c&&c.type)claimItems.push({jobNumber:j.jobNumber,type:c.type,resolver:c.resolver||'',notes:c.notes||''});});
+  const claimsCard=`<div class="rep-card"><h3>⚠️ Claims by Type</h3>${claimItems.length?claimItems.map(item=>`
+    <div class="rep-row" style="gap:6px;flex-wrap:nowrap">
+      <span style="flex:1;min-width:0">${escHtml(item.type)}${item.resolver?` <span style="color:var(--text3);font-size:10px">· ${escHtml(item.resolver)}</span>`:''}</span>
+      <span style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);cursor:pointer" onclick="showPage('csat',document.querySelector('.nav-btn'))" title="Ver en CSAT">${escHtml(item.jobNumber)}</span>
+        <button onclick="resolveClaim('${item.jobNumber.replace(/'/g,"\\'")}')" title="Marcar como resuelta" style="background:var(--rdim);border:1px solid var(--red);color:var(--red);border-radius:4px;padding:1px 7px;cursor:pointer;font-size:12px;font-weight:700;line-height:1.4">✕</button>
+      </span>
+    </div>`).join(''):'<div style="color:var(--text3);font-size:11.5px">No open claims</div>'}</div>`;
+  document.getElementById('repGrid').innerHTML=
   const makeCard=(title,rows)=>`<div class="rep-card"><h3>${title}</h3>${rows.length?rows.map(([k,v])=>`<div class="rep-row"><span>${escHtml(String(k))}</span><span class="rep-num">${v}</span></div>`).join(''):'<div style="color:var(--text3);font-size:11.5px">No data</div>'}</div>`;
   document.getElementById('repGrid').innerHTML=
     makeCard('📦 Jobs Booked by Rep',Object.entries(bookedBy).sort((a,b)=>b[1]-a[1]).slice(0,10))+
     makeCard('✅ Mid-Move Calls Done',Object.entries(mmcBy).sort((a,b)=>b[1]-a[1]))+
     makeCard('📞 Next-Day Calls Done',Object.entries(ndccBy).sort((a,b)=>b[1]-a[1]))+
-    makeCard('⚠️ Claims by Type',Object.entries(claimTypes).sort((a,b)=>b[1]-a[1]))+
+    claimsCard+
     `<div class="rep-card"><h3>💰 Balance Due (Est.)</h3><div style="font-size:26px;font-weight:700;color:var(--accent);margin-top:6px">$${jobs.reduce((s,j)=>s+(parseFloat(j.totalEstCost)||0),0).toLocaleString('en-US',{minimumFractionDigits:2})}</div><div style="font-size:10.5px;color:var(--text3);margin-top:3px">${jobs.length} jobs</div></div>`;
   const byBranch={};jobs.forEach(j=>{byBranch[j.branch]=(byBranch[j.branch]||0)+1;});
   document.getElementById('branchRepGrid').innerHTML=Object.entries(byBranch).sort((a,b)=>b[1]-a[1]).map(([b,n])=>`
@@ -1451,12 +1472,72 @@ function buildSummary(){
     const mc=bj.filter(j=>(csatData[j.jobNumber]||{}).mmcStatus==='✅').length;
     return `<div class="stat-card" style="flex-direction:column;align-items:flex-start;gap:4px"><span class="bp ${branchClass(b)}">${b}</span><div style="font-size:18px;font-weight:700">${bj.length}</div><div style="font-size:10px;color:var(--text3)">${mc} MMC ✅</div></div>`;
   }).join('');buildExpBranches();buildExpWeeks();
+  // Populate CSAT export filters
+  const months=[...new Set(allJobs.map(j=>(j.date||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  const cm=document.getElementById('expCSATMonth');
+  if(cm){const cv=cm.value;cm.innerHTML='<option value="">All Months</option>'+months.map(m=>`<option value="${m}"${m===cv?' selected':''}>${m}</option>`).join('');}
+  const cr=document.getElementById('expCSATRep');
+  if(cr){const cv=cr.value;cr.innerHTML='<option value="">All Reps</option>'+REPS.map(r=>`<option value="${r}"${r===cv?' selected':''}>${escHtml(r)}</option>`).join('');}
 }
-function exportCSAT(){
-  const h=['Date','Branch','Customer','Job #','Time','NDCC Rep','Next-Day','MMC Rep','Mid-Move','Notes','Claim Type','Claim Resolver','Claim Notes','Week'];
-  const rows=allJobs.map(j=>{const d=csatData[j.jobNumber]||{};const c=d.claim||{};return[j.date,j.branch,j.customer,j.jobNumber,d.manualTime||j.startTime||'',d.ndccRep||'',d.ndccStatus||'',d.mmcRep||'',d.mmcStatus||'',d.notes||'',c.type||'',c.resolver||'',c.notes||'',j.week||''];});
-  dlCSV([h,...rows],'SmartMove_CSAT_'+todayISO()+'.csv');
+async function exportCSATXLSX(){
+  const mf=document.getElementById('expCSATMonth').value;
+  const rf=document.getElementById('expCSATRep').value;
+  let jobs=[...allJobs];
+  if(mf)jobs=jobs.filter(j=>(j.date||'').startsWith(mf));
+  if(rf)jobs=jobs.filter(j=>{const d=csatData[j.jobNumber]||{};return d.ndccRep===rf||d.mmcRep===rf;});
+  if(typeof ExcelJS==='undefined'){toast('ExcelJS no disponible','err');return;}
+  const wb=new ExcelJS.Workbook();
+  const ws=wb.addWorksheet('CSAT Report');
+  const cols=[
+    {header:'Date',key:'date',width:12},{header:'Branch',key:'branch',width:14},
+    {header:'Customer',key:'customer',width:22},{header:'Job #',key:'jobNumber',width:12},
+    {header:'Time',key:'time',width:10},{header:'Week',key:'week',width:6},
+    {header:'Status',key:'status',width:12},
+    {header:'NDCC Rep',key:'ndccRep',width:12},{header:'Next-Day Call',key:'ndccStatus',width:14},
+    {header:'MMC Rep',key:'mmcRep',width:12},{header:'Mid-Move Call',key:'mmcStatus',width:14},
+    {header:'Notes',key:'notes',width:24},{header:'Claim Type',key:'claimType',width:14},
+    {header:'Claim Resolver',key:'claimResolver',width:16}
+  ];
+  ws.columns=cols;
+  // Header styling
+  const hdr=ws.getRow(1);
+  hdr.font={bold:true};
+  hdr.eachCell(cell=>{
+    cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2F2F2'}};
+    cell.border={bottom:{style:'thin',color:{argb:'FFCCCCCC'}}};
+    cell.alignment={vertical:'middle'};
+  });
+  // Data rows
+  const statusColors={'✅':'FF22c55e','📬':'FF3b82f6','❓':'FFf59e0b','💬':'FF8b5cf6','⭐':'FFf5c842','✗':'FFef4444'};
+  jobs.forEach((j,idx)=>{
+    const d=csatData[j.jobNumber]||{};
+    const c=d.claim||{};
+    const row=ws.addRow({
+      date:j.date||'',branch:j.branch||'',customer:j.customer||'',
+      jobNumber:j.jobNumber||'',time:d.manualTime||j.startTime||'',week:j.week||'',
+      status:j.status||'',ndccRep:d.ndccRep||'',ndccStatus:d.ndccStatus||'',
+      mmcRep:d.mmcRep||'',mmcStatus:d.mmcStatus||'',
+      notes:d.notes||'',claimType:c.type||'',claimResolver:c.resolver||''
+    });
+    // Alternate row bg
+    if(idx%2===1)row.eachCell(cell=>{cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF9F9FB'}};});
+  });
+  // Totals row
+  const ndccDone=jobs.filter(j=>(csatData[j.jobNumber]||{}).ndccStatus&&(csatData[j.jobNumber]||{}).ndccStatus!=='').length;
+  const mmcDone=jobs.filter(j=>(csatData[j.jobNumber]||{}).mmcStatus&&(csatData[j.jobNumber]||{}).mmcStatus!=='').length;
+  ws.addRow({});
+  const totRow=ws.addRow({date:'TOTALS',customer:`${jobs.length} jobs`,ndccStatus:`${ndccDone} NDCC done`,mmcStatus:`${mmcDone} MMC done`});
+  totRow.font={bold:true};totRow.getCell('date').fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFE8CC'}};
+  const label=rf?rf:(mf?mf:'All');
+  const fname=`SmartMove_CSAT_${label}_${todayISO()}.xlsx`;
+  const buffer=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=fname;a.click();
+  URL.revokeObjectURL(url);
+  toast('📥 '+fname,'ok');
 }
+function exportCSAT(){exportCSATXLSX();} // backward compat
 function dlCSV(rows,fn){
   const csv=rows.map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
@@ -1544,6 +1625,10 @@ function addRep(){REPS.push('New Rep');renderRepTags();}
 function saveSettings(){
   localStorage.setItem('smv_reps',JSON.stringify(REPS));
   rebuildRepFilter();
+  // Push REPS to Firebase immediately so all users see the change
+  if(_fbInit&&_fbDB){
+    _fbDB.ref().update({'smv/REPS':REPS}).catch(e=>console.warn('FB reps err',e));
+  }
   // Firebase config
   const fbRaw=document.getElementById('fbConfigInput').value.trim();
   if(fbRaw){
@@ -1559,7 +1644,7 @@ function saveSettings(){
     }
   }
   closeModal('settingsModal');
-  if(!fbRaw)toast('Settings saved','ok');
+  toast('Settings saved — reps synced to all users ✓','ok');
   renderTable();
 }
 
