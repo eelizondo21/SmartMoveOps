@@ -533,21 +533,35 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
 </div>
 
 <div class="overlay" id="settingsModal">
-  <div class="modal" style="width:500px">
+  <div class="modal" style="width:520px;max-height:90vh;overflow-y:auto">
     <div class="modal-title">⚙️ Settings</div>
     <div class="fg">
-      <label class="fl">Team Members</label>
+      <label class="fl">Team Members (CSAT Reps)</label>
       <div class="rep-tags" id="repTags"></div>
       <button class="btn btn-s btn-sm" style="margin-top:8px" onclick="addRep()">+ Add Rep</button>
     </div>
+    <!-- USER MANAGEMENT — admin only -->
+    <div class="fg" id="userMgmtSection" style="display:none;border-top:1px solid var(--border);padding-top:14px">
+      <label class="fl" style="font-size:11px;font-weight:700;color:var(--text)">👥 Acceso al Dashboard</label>
+      <div id="usersList" style="margin-bottom:12px;max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;background:var(--bg3)"></div>
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">+ Agregar nuevo usuario</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+          <input class="finp" id="newUserName" placeholder="Nombre (ej. Pablo)" style="flex:1;min-width:100px;font-size:11px;padding:5px 8px">
+          <input class="finp" id="newUserEmail" type="email" placeholder="correo@email.com" style="flex:2;min-width:160px;font-size:11px;padding:5px 8px">
+        </div>
+        <div style="display:flex;gap:6px">
+          <input class="finp" id="newUserPwd" type="password" placeholder="Contraseña temporal" style="flex:1;font-size:11px;padding:5px 8px">
+          <button class="btn btn-p btn-sm" onclick="createNewUser()" style="white-space:nowrap">✚ Crear</button>
+        </div>
+        <div id="newUserErr" style="font-size:11px;color:var(--red);margin-top:5px;min-height:16px"></div>
+      </div>
+    </div>
     <div class="fg">
-      <label class="fl">🔥 Firebase Config — sync en tiempo real para todo el equipo</label>
-      <textarea class="finp" id="fbConfigInput" style="min-height:90px;font-family:'JetBrains Mono',monospace;font-size:10.5px"
+      <label class="fl">🔥 Firebase Config</label>
+      <textarea class="finp" id="fbConfigInput" style="min-height:70px;font-family:'JetBrains Mono',monospace;font-size:10px"
         placeholder='{"apiKey":"...","projectId":"...","databaseURL":"https://...-default-rtdb.firebaseio.com"}'></textarea>
       <div id="fbStatusDiv" style="margin-top:5px"></div>
-      <p style="font-size:10px;color:var(--text3);margin-top:4px">Con Firebase, todos los cambios se ven en tiempo real para todos los usuarios con el link.</p>
-      <p style="font-size:10px;color:var(--yellow);margin-top:4px">⚠️ En Firebase Console → Realtime Database → Reglas, asegúrate de tener:<br>
-      <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:10px">{ "rules": { ".read": true, ".write": true } }</code></p>
     </div>
     <div class="modal-acts">
       <button class="btn btn-s" onclick="closeModal('settingsModal')">Close</button>
@@ -1053,7 +1067,10 @@ function resolveClaim(jn){
   if(cur&&cur.id==='page-reports')buildReports();
   toast('✅ Claim resolved — removed from Reports','ok');
 }
-function openModal(id){document.getElementById(id).classList.add('open');}
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  if(id==='settingsModal'&&isAdmin)setTimeout(loadUsersForAdmin,100);
+}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
 // ═══ BD SIDEBAR ═══
@@ -1852,33 +1869,119 @@ function applyRoleUI(){
   }
 }
 
+async function checkAndRegisterUser(user){
+  try{
+    const url=`https://smartmove-ops-default-rtdb.firebaseio.com/smv/users/${user.uid}.json`;
+    const resp=await fetch(url);
+    const data=await resp.json();
+    if(data&&data.disabled===true){
+      await _fbAuth.signOut();
+      showLoginScreen();
+      setTimeout(()=>{document.getElementById('loginErr').textContent='Tu acceso ha sido deshabilitado. Contacta al administrador.';},200);
+      return false;
+    }
+    if(!data){
+      const role=ADMIN_UIDS.has(user.uid)?'admin':'user';
+      await fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email:user.email,name:user.email.split('@')[0],role,disabled:false,createdAt:Date.now()})});
+    }
+  }catch(e){console.warn('User check failed',e);}
+  return true;
+}
+
 function onLoginSuccess(user){
-  // Show user info in header
-  const ui=document.getElementById('userInfo');
-  if(ui){
-    const name=user.email.split('@')[0];
-    ui.innerHTML=`
-      <span style="font-size:11px;color:var(--text2)">${escHtml(user.email)}</span>
-      ${isAdmin?'<span style="font-size:9px;background:var(--aglow);color:var(--accent);padding:1px 7px;border-radius:8px;font-weight:700">ADMIN</span>':''}
-      <button class="btn btn-s btn-sm" onclick="doLogout()" style="font-size:10px;padding:3px 9px">↩ Salir</button>`;
-  }
-  applyRoleUI();
-  hideLoginScreen();
-  // Load data (only once)
-  if(!_authInited){
-    _authInited=true;
-    loadState();
-    const archive=JSON.parse(localStorage.getItem('smv_archive')||'{}');
-    allJobs=Object.values(archive);
-    allJobs.forEach(j=>{if(j.jobNumber)smLookup[j.jobNumber]=j;});
-    rebuildRepFilter();rebuildBranchFilter();renderRepTags();updateStats();checkRball();
-    if(allJobs.length>0){renderTable();setTimeout(()=>toast(`📂 ${allJobs.length} jobs cargados`,'ok'),400);}
-    // Connect to Firebase DB
-    try{
-      initFirebase(_FIREBASE_CONFIG);
-      const fbInp=document.getElementById('fbConfigInput');
-      if(fbInp)fbInp.value=JSON.stringify(_FIREBASE_CONFIG,null,2);
-    }catch(e){console.warn('Firebase DB failed',e);setFbStatus(false);}
+  checkAndRegisterUser(user).then(ok=>{
+    if(!ok)return;
+    const ui=document.getElementById('userInfo');
+    if(ui){
+      ui.innerHTML=`
+        <span style="font-size:11px;color:var(--text2)">${escHtml(user.email)}</span>
+        ${isAdmin?'<span style="font-size:9px;background:var(--aglow);color:var(--accent);padding:1px 7px;border-radius:8px;font-weight:700">ADMIN</span>':''}
+        <button class="btn btn-s btn-sm" onclick="doLogout()" style="font-size:10px;padding:3px 9px">↩ Salir</button>`;
+    }
+    applyRoleUI();
+    hideLoginScreen();
+    if(!_authInited){
+      _authInited=true;
+      loadState();
+      const archive=JSON.parse(localStorage.getItem('smv_archive')||'{}');
+      allJobs=Object.values(archive);
+      allJobs.forEach(j=>{if(j.jobNumber)smLookup[j.jobNumber]=j;});
+      rebuildRepFilter();rebuildBranchFilter();renderRepTags();updateStats();checkRball();
+      if(allJobs.length>0){renderTable();setTimeout(()=>toast(`📂 ${allJobs.length} jobs cargados`,'ok'),400);}
+      try{
+        initFirebase(_FIREBASE_CONFIG);
+        const fbInp=document.getElementById('fbConfigInput');
+        if(fbInp)fbInp.value=JSON.stringify(_FIREBASE_CONFIG,null,2);
+      }catch(e){console.warn('Firebase DB failed',e);setFbStatus(false);}
+    }
+    if(isAdmin){
+      const um=document.getElementById('userMgmtSection');
+      if(um)um.style.display='block';
+      // Load users list after DB connects
+      setTimeout(loadUsersForAdmin,2000);
+    }
+  });
+}
+
+// ═══ USER MANAGEMENT (admin only) ═══
+async function loadUsersForAdmin(){
+  if(!_fbInit||!_fbDB){setTimeout(loadUsersForAdmin,1500);return;}
+  const snap=await _fbDB.ref('smv/users').once('value');
+  const users=snap.val()||{};
+  const ul=document.getElementById('usersList');
+  if(!ul)return;
+  const entries=Object.entries(users).sort((a,b)=>((a[1].name||'').localeCompare(b[1].name||'')));
+  if(!entries.length){ul.innerHTML='<div style="padding:12px;color:var(--text3);font-size:12px;text-align:center">No hay usuarios registrados aún.</div>';return;}
+  ul.innerHTML=entries.map(([uid,u])=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px${u.disabled?';opacity:.5':''}">
+      <span style="flex:1;min-width:0;overflow:hidden">
+        <span style="font-weight:600">${escHtml(u.name||'')}</span>
+        <span style="color:var(--text3);font-size:10px;margin-left:6px">${escHtml(u.email||'')}</span>
+      </span>
+      ${ADMIN_UIDS.has(uid)?'<span style="font-size:9px;background:var(--aglow);color:var(--accent);padding:1px 7px;border-radius:6px;font-weight:700">ADMIN</span>':''}
+      ${ADMIN_UIDS.has(uid)?'':
+        u.disabled?
+          `<button onclick="toggleUserAccess('${uid}',true)" class="btn btn-s btn-sm" style="font-size:10px;padding:2px 8px;color:var(--green);border-color:rgba(48,201,154,.4)">✔ Habilitar</button>`:
+          `<button onclick="toggleUserAccess('${uid}',false)" class="btn btn-s btn-sm" style="font-size:10px;padding:2px 8px;color:var(--red);border-color:rgba(232,80,80,.4)">✕ Deshabilitar</button>`
+      }
+    </div>`).join('');
+}
+
+async function toggleUserAccess(uid,currentlyDisabled){
+  if(!_fbDB)return;
+  await _fbDB.ref('smv/users/'+uid+'/disabled').set(!currentlyDisabled);
+  toast(!currentlyDisabled?'✕ Usuario deshabilitado — ya no podrá acceder':'✔ Usuario habilitado','ok');
+  loadUsersForAdmin();
+}
+
+async function createNewUser(){
+  const name=document.getElementById('newUserName').value.trim();
+  const email=document.getElementById('newUserEmail').value.trim();
+  const pwd=document.getElementById('newUserPwd').value;
+  const errEl=document.getElementById('newUserErr');
+  errEl.textContent='';
+  if(!email||!pwd){errEl.textContent='Correo y contraseña son obligatorios.';return;}
+  if(pwd.length<6){errEl.textContent='La contraseña debe tener al menos 6 caracteres.';return;}
+  errEl.textContent='⏳ Creando usuario...';
+  let tempApp=null;
+  try{
+    tempApp=firebase.initializeApp(_FIREBASE_CONFIG,'smv_tmp_'+Date.now());
+    const tempAuth=firebase.auth(tempApp);
+    const cred=await tempAuth.createUserWithEmailAndPassword(email,pwd);
+    const uid=cred.user.uid;
+    await _fbDB.ref('smv/users/'+uid).set({
+      email,name:name||email.split('@')[0],role:'user',disabled:false,createdAt:Date.now()
+    });
+    await tempApp.delete();
+    ['newUserName','newUserEmail','newUserPwd'].forEach(id=>document.getElementById(id).value='');
+    errEl.textContent='';
+    toast('✅ Usuario creado: '+email,'ok');
+    loadUsersForAdmin();
+  }catch(e){
+    if(tempApp)try{tempApp.delete();}catch(ex){}
+    errEl.textContent=e.code==='auth/email-already-in-use'?'Ese correo ya está registrado.':
+      e.code==='auth/invalid-email'?'Correo inválido.':'Error: '+e.message;
   }
 }
 
