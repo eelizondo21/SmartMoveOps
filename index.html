@@ -1016,8 +1016,8 @@ function editNote(jn){
 }
 function updateStats(){
   document.getElementById('stTotal').textContent=allJobs.length;
-  document.getElementById('stMMC').textContent=Object.values(csatData).filter(d=>d.mmcStatus==='✅').length;
-  document.getElementById('stNDCC').textContent=Object.values(csatData).filter(d=>d.ndccStatus==='✅').length;
+  document.getElementById('stMMC').textContent=Object.values(csatData).filter(d=>d.mmcStatus&&d.mmcStatus!=='').length;
+  document.getElementById('stNDCC').textContent=Object.values(csatData).filter(d=>d.ndccStatus&&d.ndccStatus!=='').length;
   document.getElementById('stClaims').textContent=Object.values(csatData).filter(d=>d.claim&&d.claim.type).length;
 }
 
