@@ -976,7 +976,7 @@ function renderTable(){
     const hasNote=d.notes&&d.notes.trim();
     const escJN=j.jobNumber.replace(/'/g,"\'");
     const isOpportunity=j.status==='Opportunity';
-    const isOurOpportunity=isOpportunity&&REPS.some(r=>r.toLowerCase()===(j.salesperson||'').toLowerCase().trim());
+    const isOurOpportunity=isOpportunity&&REPS.some(r=>(j.salesperson||'').toLowerCase().includes(r.toLowerCase()));
     const mmcDone=d.mmcStatus&&d.mmcStatus!=='';
     const isPast=j.date&&j.date<=todayISO();
     const pendingMmc=!mmcDone&&isPast&&!isOpportunity;
