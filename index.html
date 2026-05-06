@@ -281,7 +281,7 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
         <select class="fi" id="csatSortField" onchange="renderTable()" style="font-size:11px;padding:3px 7px">
           <option value="date">Date</option><option value="startTime">Time</option>
-          <option value="customer">Customer</option><option value="branch">Branch</option><option value="jobNumber">Job #</option>
+          <option value="customer">Customer</option><option value="branch">Branch</option><option value="jobNumber">Job #</option><option value="status">Status</option>
         </select>
         <button class="btn btn-s btn-sm" id="csatSortDirBtn" onclick="toggleCSATSort()" style="font-size:11px;padding:3px 9px">↑ A-Z</button>
         <button class="btn btn-s btn-sm" onclick="openBranchToggleModal()" style="font-size:11px;padding:3px 9px">🏢 Branches</button>
@@ -302,10 +302,10 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
         <thead><tr>
           <th onclick="sortBy('date')">Date</th><th onclick="sortBy('branch')">Branch</th>
           <th onclick="sortBy('customer')">Customer</th><th onclick="sortBy('jobNumber')">Job #</th>
-          <th>Time</th><th>Next-Day Rep</th><th>Next-Day Call</th>
+          <th>Time</th><th onclick="sortBy('status')">Status</th><th>Next-Day Rep</th><th>Next-Day Call</th>
           <th>MMC Rep</th><th>Mid-Move Call</th><th>Notes</th><th>Claim</th>
         </tr></thead>
-        <tbody id="csatBody"><tr><td colspan="11"><div class="empty"><div class="empty-ico">📂</div><div class="empty-msg">No data — paste your SmartMoving export above</div></div></td></tr></tbody>
+        <tbody id="csatBody"><tr><td colspan="12"><div class="empty"><div class="empty-ico">📂</div><div class="empty-msg">No data — paste your SmartMoving export above</div></div></td></tr></tbody>
       </table>
     </div>
   </div>
@@ -935,6 +935,7 @@ function renderTable(){
     if(sf==='customer'){av=a.customer;bv=b.customer;}
     else if(sf==='branch'){av=a.branch;bv=b.branch;}
     else if(sf==='jobNumber'){av=a.jobNumber;bv=b.jobNumber;}
+    else if(sf==='status'){av=a.status||'';bv=b.status||'';}
     else if(sf==='startTime'){
       const ta=(csatData[a.jobNumber]||{}).manualTime||a.startTime||'';
       const tb=(csatData[b.jobNumber]||{}).manualTime||b.startTime||'';
@@ -950,9 +951,22 @@ function renderTable(){
   if(hf!==''){const h=parseInt(hf);jobs=jobs.filter(j=>{const t=(csatData[j.jobNumber]||{}).manualTime||j.startTime||'';return extractHour(t)===h;});}
   document.getElementById('rowCount').textContent=jobs.length+' jobs';
   const tbody=document.getElementById('csatBody');
-  if(!jobs.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="empty-ico">🔍</div><div class="empty-msg">No results</div></div></td></tr>`;return;}
+  if(!jobs.length){tbody.innerHTML=`<tr><td colspan="12"><div class="empty"><div class="empty-ico">🔍</div><div class="empty-msg">No results</div></div></td></tr>`;return;}
   const ndccBtns=['✅','📬','❓','✗'];
   const mmcBtns=['✅','📬','❓','💬','⭐'];
+  const statusBadge=s=>{
+    if(!s)return '';
+    const map={
+      'Closed':   ['#30c99a','rgba(48,201,154,.15)'],
+      'Completed':['#f48c1e','rgba(244,140,30,.15)'],
+      'Booked':   ['#5b9cf6','rgba(91,156,246,.15)'],
+      'Opportunity':['#a080f0','rgba(160,128,250,.15)'],
+      'Lost':     ['#e85050','rgba(232,80,80,.15)'],
+      'Cancelled':['#e85050','rgba(232,80,80,.15)'],
+    };
+    const[color,bg]=map[s]||['#9090a0','rgba(144,144,160,.12)'];
+    return `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:9.5px;font-weight:600;background:${bg};color:${color};white-space:nowrap">${s}</span>`;
+  };
   tbody.innerHTML=jobs.map(j=>{
     const d=csatData[j.jobNumber]||{};
     const bc='b'+j.branch.replace(/\s/g,'');
@@ -961,17 +975,21 @@ function renderTable(){
     const cbTxt=!cl.type?'—':`⚠️ ${cl.type}${cl.resolver?' · '+cl.resolver:''}`;
     const hasNote=d.notes&&d.notes.trim();
     const escJN=j.jobNumber.replace(/'/g,"\'");
-    // Amber highlight: MMC not done and date is today or past
+    const isOpportunity=j.status==='Opportunity';
     const mmcDone=d.mmcStatus&&d.mmcStatus!=='';
     const isPast=j.date&&j.date<=todayISO();
-    const pendingMmc=!mmcDone&&isPast;
-    const rowStyle=pendingMmc?'background:rgba(245,200,66,0.08);border-left:3px solid rgba(245,200,66,0.55)':'';
+    const pendingMmc=!mmcDone&&isPast&&!isOpportunity;
+    // Opportunity → vivid purple highlight; pending MMC → amber
+    const rowStyle=isOpportunity?
+      'background:rgba(160,128,250,0.10);border-left:3px solid rgba(160,128,250,0.7)':
+      pendingMmc?'background:rgba(245,200,66,0.08);border-left:3px solid rgba(245,200,66,0.55)':'';
     return `<tr style="${rowStyle}">
       <td style="color:var(--text2)">${fmtDate(j.date)}</td>
       <td><span class="bp ${bc}">${j.branch}</span></td>
       <td style="font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis">${escHtml(j.customer)}</td>
       <td style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent)">${j.jobNumber}</td>
       <td><input type="time" class="time-inp" style="width:80px;cursor:pointer" value="${toTimeInput(d.manualTime||j.startTime||'')}" onchange="setTime('${escJN}',fromTimeInput(this.value))"></td>
+      <td>${statusBadge(j.status)}</td>
       <td><select class="rep-sel ${d.ndccRep?'r'+d.ndccRep:''}" onchange="setNDCCRep('${escJN}',this)">${REPS.map(r=>`<option${d.ndccRep===r?' selected':''}>${r}</option>`).join('')}</select></td>
       <td><div class="sbg">${ndccBtns.map(s=>`<button class="sbtn${s==='✗'?' x-btn':''}${d.ndccStatus===s?' on':''}" onclick="setStatus('${escJN}','ndcc','${s}',this)">${s}</button>`).join('')}</div></td>
       <td><select class="rep-sel ${d.mmcRep?'r'+d.mmcRep:''}" onchange="setMMCRep('${escJN}',this)">${REPS.map(r=>`<option${d.mmcRep===r?' selected':''}>${r}</option>`).join('')}</select></td>
