@@ -275,6 +275,15 @@ table.bdt{width:100%;border-collapse:collapse;font-size:11px;font-family:'JetBra
       </div>
     </div>
   </div>
+  <!-- OUR OPPORTUNITIES ALERT -->
+  <div id="ourOppsPanel" style="display:none;background:rgba(232,80,80,0.08);border:1px solid rgba(232,80,80,0.35);border-left:4px solid var(--red);border-radius:10px;padding:10px 14px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <span style="font-size:11px;font-weight:700;color:var(--red)">💣 Our team has open Opportunities — review before they're missed</span>
+      <span id="ourOppsCount" style="font-size:10px;background:var(--red);color:#fff;padding:1px 8px;border-radius:10px;font-weight:700"></span>
+    </div>
+    <div id="ourOppsList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+  </div>
+
   <div class="card" style="padding:0">
     <div class="card-header" style="padding:12px 16px 0;flex-wrap:wrap;gap:8px">
       <span class="card-lbl">📊 Call Log</span>
@@ -907,6 +916,29 @@ function toggleCSATSort(){
 function sortBy(field){const sel=document.getElementById('csatSortField');if(sel)sel.value=field;renderTable();}
 
 // ═══ CSAT TABLE ═══
+function updateOurOpps(){
+  const opps=allJobs.filter(j=>
+    j.status==='Opportunity'&&
+    REPS.some(r=>(j.salesperson||'').toLowerCase().includes(r.toLowerCase()))
+  );
+  const panel=document.getElementById('ourOppsPanel');
+  const list=document.getElementById('ourOppsList');
+  const count=document.getElementById('ourOppsCount');
+  if(!panel||!list)return;
+  if(!opps.length){panel.style.display='none';return;}
+  panel.style.display='block';
+  count.textContent=opps.length+' pending';
+  list.innerHTML=opps.map(j=>`
+    <div style="display:flex;align-items:center;gap:5px;background:rgba(232,80,80,0.10);border:1px solid rgba(232,80,80,0.3);border-radius:6px;padding:4px 10px;font-size:11px">
+      <span style="font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:10px;font-weight:700">${escHtml(j.jobNumber)}</span>
+      <span style="color:var(--text2)">·</span>
+      <span style="font-weight:600">${escHtml(j.customer)}</span>
+      <span style="color:var(--text3);font-size:10px">${escHtml(j.branch)}</span>
+      <span style="color:var(--text3);font-size:10px">${fmtDate(j.date)||'no date'}</span>
+      <span style="color:var(--red);font-size:10px;font-weight:600">${escHtml((j.salesperson||'').split(' ')[0])}</span>
+    </div>`).join('');
+}
+
 function renderTable(){
   const df=document.getElementById('filterDate').value;
   const bf=document.getElementById('filterBranch').value;
@@ -982,7 +1014,7 @@ function renderTable(){
     const pendingMmc=!mmcDone&&isPast&&!isOpportunity;
     // Our Opportunity → light red; other Opportunity → subtle purple; pending MMC → amber
     const rowStyle=isOurOpportunity?
-      'background:rgba(232,80,80,0.18);border-left:4px solid rgba(232,80,80,0.85)':
+      'background:rgba(232,80,80,0.07);border-left:3px solid rgba(232,80,80,0.5)':
       isOpportunity?'background:rgba(160,128,250,0.07);border-left:3px solid rgba(160,128,250,0.4)':
       pendingMmc?'background:rgba(245,200,66,0.08);border-left:3px solid rgba(245,200,66,0.55)':'';
     return `<tr style="${rowStyle}">
@@ -1001,6 +1033,7 @@ function renderTable(){
     </tr>`;
   }).join('');
   updateStats();
+  updateOurOpps();
 }
 
 function extractHour(t){
@@ -1230,9 +1263,11 @@ function renderBD(){
   if(bdSortCol){
     filtered.sort((a,b)=>{
       let av=a.r[bdSortCol]??'',bv=b.r[bdSortCol]??'';
-      const na=parseFloat(av),nb=parseFloat(bv);
-      if(!isNaN(na)&&!isNaN(nb))return bdSortDir==='asc'?na-nb:nb-na;
-      return bdSortDir==='asc'?String(av).localeCompare(String(bv),'en',{numeric:true}):String(bv).localeCompare(String(av),'en',{numeric:true});
+      if(bdSortCol!=='date'){
+        const na=parseFloat(av),nb=parseFloat(bv);
+        if(!isNaN(na)&&!isNaN(nb))return bdSortDir==='asc'?na-nb:nb-na;
+      }
+      return bdSortDir==='asc'?String(av).localeCompare(String(bv),'en',{sensitivity:'base'}):String(bv).localeCompare(String(av),'en',{sensitivity:'base'});
     });
   }
   document.getElementById('bdRowCount').textContent=filtered.length+' rows';
