@@ -1917,7 +1917,6 @@ function saveBD(){
 }
 
 // ═══ FORMULA BAR ═══
-let activeCell=null;
 function applyFormula(){
   if(!activeCell){toast('Click a cell first','err');return;}
   const raw=document.getElementById('fxInput').value.trim();
