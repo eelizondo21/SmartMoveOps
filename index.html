@@ -319,7 +319,6 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;white-space:nowra
     <button class="nb" onclick="showPage('breakdowns',this)">🧾 Breakdowns</button>
     <button class="nb" onclick="showPage('reports',this)">📊 Reports</button>
     <button class="nb" onclick="showPage('export',this)">📤 Export</button>
-    <button class="nb" onclick="showPage('ob',this)">💰 Outstanding</button>
   </nav>
   <div class="hdr-right">
     <div id="userInfo"></div>
@@ -344,48 +343,47 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;white-space:nowra
 
   <div class="g2" style="margin-bottom:14px">
     <div class="card ct">
-      <div class="card-hd"><span class="card-lbl">📥 Import Jobs</span></div>
-      <p style="font-size:11px;color:var(--text3);margin-bottom:7px">Paste CSV/TSV from SmartMoving — all rows are merged into the archive</p>
+      <div class="card-hd"><span class="card-lbl">📥 Import Jobs from SmartMoving</span></div>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:7px">Paste the all-jobs CSV/TSV export — rows merge automatically into the archive.</p>
       <textarea class="import-area" id="importArea" placeholder="Paste all-jobs CSV/TSV here…"></textarea>
       <div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap">
         <button class="btn btn-p" onclick="importData()">⚡ Process</button>
-        <button class="btn btn-s" onclick="clearImport()">🗑 Clear Paste</button>
+        <button class="btn btn-s btn-sm" onclick="clearImport()">🗑 Clear paste</button>
         <button class="btn btn-s btn-sm" onclick="loadDemo()">🎭 Demo</button>
         <button class="btn btn-s btn-sm" onclick="clearAll()" style="color:var(--red)">💥 Reset All</button>
       </div>
     </div>
     <div class="card cg">
-      <div class="card-hd"><span class="card-lbl">🔍 Filters</span></div>
-      <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="card-hd"><span class="card-lbl">🔍 Quick Filters</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
         <div>
-          <div style="font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:4px">Date Range</div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap">
-            <input type="date" class="fi" id="filterDateFrom" onchange="renderTable()" style="flex:1;min-width:120px">
-            <input type="date" class="fi" id="filterDateTo" onchange="renderTable()" style="flex:1;min-width:120px">
+          <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:5px">📅 Date</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
             <button class="btn btn-s btn-sm" onclick="setToday()">Today</button>
             <button class="btn btn-s btn-sm" onclick="setTomorrow()">Tomorrow</button>
-            <button class="btn btn-s btn-sm" onclick="clearDateFilter()">All</button>
+            <button class="btn btn-s btn-sm" onclick="clearDateFilter()">All Dates</button>
+            <input type="date" class="fi" id="filterDateFrom" onchange="renderTable()" style="flex:1;min-width:110px;font-size:11px">
+            <span style="color:var(--text3);font-size:11px">→</span>
+            <input type="date" class="fi" id="filterDateTo" onchange="renderTable()" style="flex:1;min-width:110px;font-size:11px">
           </div>
         </div>
         <div style="display:flex;gap:7px;flex-wrap:wrap">
           <div style="flex:1;min-width:110px">
-            <div style="font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:3px">Branch</div>
+            <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:3px">🏢 Branch</div>
             <select class="fi" id="filterBranch" onchange="renderTable()" style="width:100%">
-              <option value="">All Branches</option>
-              <option value="HQ">HQ (Wil+Ral+Grv)</option>
+              <option value="">All Branches</option><option value="HQ">HQ (Wil+Ral+Grv)</option>
             </select>
           </div>
           <div style="flex:1;min-width:90px">
-            <div style="font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:3px">Rep</div>
-            <select class="fi" id="filterRep" onchange="renderTable()" style="width:100%"><option value="">All</option></select>
+            <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:3px">👤 Rep</div>
+            <select class="fi" id="filterRep" onchange="renderTable()" style="width:100%"><option value="">All Reps</option></select>
           </div>
         </div>
-        <button class="btn btn-s btn-sm" onclick="openBranchToggleModal()" style="align-self:flex-start">🏢 Manage Branches</button>
+        <button class="btn btn-s btn-sm" onclick="openBranchToggleModal()" style="align-self:flex-start">⚙️ Manage Visible Branches</button>
       </div>
     </div>
   </div>
 
-  <!-- Opps alert -->
   <div id="ourOppsPanel" class="opps-panel" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
       <span style="font-size:11px;font-weight:700;color:var(--red)">💣 Our Opportunities — follow up before they go cold</span>
@@ -395,19 +393,19 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;white-space:nowra
   </div>
 
   <div class="card" style="padding:0">
-    <div style="padding:11px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px;border-bottom:1px solid var(--border)">
-      <span class="card-lbl">📊 Call Log</span>
+    <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px;border-bottom:1px solid var(--border)">
+      <div>
+        <span class="card-lbl">📊 Call Log</span>
+        <span style="font-size:10px;color:var(--text3);margin-left:10px">✅ reached &nbsp;·&nbsp; 📬 voicemail &nbsp;·&nbsp; ❓ no answer &nbsp;·&nbsp; ✗ do not call &nbsp;·&nbsp; ⭐ great &nbsp;·&nbsp; 💬 note</span>
+      </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
         <select class="fi btn-sm" id="csatSortField" onchange="renderTable()">
-          <option value="date">Sort: Date</option>
-          <option value="startTime">Sort: Time</option>
-          <option value="customer">Sort: Customer</option>
-          <option value="branch">Sort: Branch</option>
-          <option value="jobNumber">Sort: Job #</option>
-          <option value="status">Sort: Status</option>
+          <option value="date">Sort: Date</option><option value="startTime">Sort: Time</option>
+          <option value="customer">Sort: Customer</option><option value="branch">Sort: Branch</option>
+          <option value="jobNumber">Sort: Job #</option><option value="status">Sort: Status</option>
         </select>
-        <button class="btn btn-s btn-sm" id="csatSortDirBtn" onclick="toggleCSATSort()">↑ A-Z</button>
-        <span style="font-size:10.5px;color:var(--text3)" id="rowCount">0 jobs</span>
+        <button class="btn btn-s btn-sm" id="csatSortDirBtn" onclick="toggleCSATSort()">↑ A→Z</button>
+        <span style="font-size:10.5px;color:var(--text3);background:var(--bg3);padding:2px 8px;border-radius:5px" id="rowCount">0 jobs</span>
       </div>
     </div>
     <div class="csat-status-bar">
@@ -420,22 +418,24 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;white-space:nowra
     </div>
     <div class="tbl-wrap" style="max-height:64vh">
       <table class="tbl" id="csatTable">
-        <thead><tr>
-          <th onclick="sortBy('date')">Date</th>
-          <th onclick="sortBy('branch')">Branch</th>
-          <th onclick="sortBy('customer')">Customer</th>
-          <th onclick="sortBy('jobNumber')">Job #</th>
-          <th class="no-sort">Time</th>
-          <th onclick="sortBy('status')">Status</th>
-          <th class="no-sort">NDCC Rep</th>
-          <th class="no-sort">Next-Day</th>
-          <th class="no-sort">MMC Rep</th>
-          <th class="no-sort">Mid-Move</th>
-          <th class="no-sort">Notes</th>
-          <th class="no-sort">Claim</th>
-        </tr></thead>
+        <thead>
+          <tr>
+            <th onclick="sortBy('date')">Date</th>
+            <th onclick="sortBy('branch')">Branch</th>
+            <th onclick="sortBy('customer')" style="min-width:130px">Customer</th>
+            <th onclick="sortBy('jobNumber')">Job #</th>
+            <th class="no-sort">Time</th>
+            <th onclick="sortBy('status')">Status</th>
+            <th class="no-sort" style="background:rgba(91,142,240,.07);border-left:2px solid rgba(91,142,240,.25)">NDCC Rep</th>
+            <th class="no-sort" style="background:rgba(91,142,240,.07)">📞 Next-Day</th>
+            <th class="no-sort" style="background:rgba(46,201,138,.07);border-left:2px solid rgba(46,201,138,.25)">MMC Rep</th>
+            <th class="no-sort" style="background:rgba(46,201,138,.07)">✅ Mid-Move</th>
+            <th class="no-sort">Notes</th>
+            <th class="no-sort">Claim</th>
+          </tr>
+        </thead>
         <tbody id="csatBody">
-          <tr><td colspan="12"><div class="empty"><div class="empty-ico">📂</div><div class="empty-msg">Paste SmartMoving export above</div></div></td></tr>
+          <tr><td colspan="12"><div class="empty"><div class="empty-ico">📂</div><div class="empty-msg">Paste SmartMoving export above and click Process</div></div></td></tr>
         </tbody>
       </table>
     </div>
@@ -560,58 +560,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:11.5px;white-space:nowra
   </div>
 </main>
 
-<!-- ══════════════ OUTSTANDING PAGE ══════════════ -->
-<main class="page" id="page-ob">
-  <div class="pg-hd"><div><div class="pg-title">💰 Outstanding Balances</div><div class="pg-sub">Paste daily OB export — history accumulates automatically</div></div></div>
-  <div class="g2" style="margin-bottom:14px">
-    <div class="card ct">
-      <div class="card-hd"><span class="card-lbl">📥 Import OB</span></div>
-      <p style="font-size:11px;color:var(--text3);margin-bottom:7px">Paste CSV/TSV from Outstanding Balances report.</p>
-      <textarea class="import-area" id="obImportArea" placeholder="Paste OB CSV/TSV here…"></textarea>
-      <div style="display:flex;gap:6px;margin-top:7px">
-        <button class="btn btn-p" onclick="importOB()">⚡ Process</button>
-        <button class="btn btn-s btn-sm" onclick="document.getElementById('obImportArea').value=''">✕ Clear</button>
-      </div>
-    </div>
-    <div class="card cg">
-      <div class="card-hd"><span class="card-lbl">📊 Summary</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="sc"><div class="sc-ico ico-r">💰</div><div><div class="sc-val" id="obTotalBalance">$0</div><div class="sc-lbl">Total Outstanding</div></div></div>
-        <div class="sc"><div class="sc-ico ico-o">📋</div><div><div class="sc-val" id="obCount">0</div><div class="sc-lbl">Open Invoices</div></div></div>
-      </div>
-    </div>
-  </div>
-  <div class="card" style="padding:0">
-    <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px;border-bottom:1px solid var(--border)">
-      <span class="card-lbl">💰 Outstanding Balances</span>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
-        <input type="date" class="fi" id="obFilterFrom" onchange="renderOB()" style="font-size:11px;padding:3px 7px">
-        <input type="date" class="fi" id="obFilterTo" onchange="renderOB()" style="font-size:11px;padding:3px 7px">
-        <input type="text" class="fi" id="obFilterSearch" oninput="renderOB()" placeholder="Search customer…" style="font-size:11px;padding:3px 7px;width:150px">
-        <button class="btn btn-s btn-sm" onclick="clearOBFilters()">✕</button>
-        <button class="btn btn-p btn-sm" onclick="exportOB()">⬇️ CSV</button>
-        <span style="font-size:10.5px;color:var(--text3)" id="obRowCount">0 records</span>
-      </div>
-    </div>
-    <div class="tbl-wrap" style="max-height:60vh">
-      <table class="tbl" id="obTable">
-        <thead><tr>
-          <th onclick="sortOB('date')">Service Date</th>
-          <th onclick="sortOB('customer')">Customer</th>
-          <th onclick="sortOB('quote')">Quote #</th>
-          <th onclick="sortOB('invoiceSent')">Invoice Sent</th>
-          <th onclick="sortOB('total')">Total</th>
-          <th onclick="sortOB('payments')">Payments</th>
-          <th onclick="sortOB('balance')">Balance</th>
-          <th class="no-sort">Imported</th>
-        </tr></thead>
-        <tbody id="obBody">
-          <tr><td colspan="8"><div class="empty"><div class="empty-ico">💰</div><div class="empty-msg">Paste Outstanding Balances export above</div></div></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</main>
+
 
 <!-- ══════════════ MODALS ══════════════ -->
 
@@ -1079,7 +1028,7 @@ function showPage(id,btn){
   if(id==='export'){buildSummary();buildExpBranches();buildExpWeeks();}
   if(id==='breakdowns')buildBDSidebar();
   if(id==='reports'){buildMonthFilter();buildWeekFilter();buildReports();}
-  if(id==='ob')renderOB();
+  
 }
 
 // ═══════════════════════════════════════════
@@ -1409,8 +1358,9 @@ function editNote(jn){
 }
 function updateStats(){
   document.getElementById('stTotal').textContent=allJobs.length;
-  document.getElementById('stMMC').textContent=Object.values(csatData).filter(d=>d.mmcStatus&&d.mmcStatus!=='').length;
-  document.getElementById('stNDCC').textContent=Object.values(csatData).filter(d=>d.ndccStatus&&d.ndccStatus!=='').length;
+  // Count any non-empty status as "done" — matches Google Sheets behavior
+  document.getElementById('stMMC').textContent=Object.values(csatData).filter(d=>d.mmcStatus&&d.mmcStatus.trim()!=='').length;
+  document.getElementById('stNDCC').textContent=Object.values(csatData).filter(d=>d.ndccStatus&&d.ndccStatus.trim()!=='').length;
   document.getElementById('stClaims').textContent=Object.values(csatData).filter(d=>d.claim&&d.claim.type).length;
 }
 
@@ -1486,7 +1436,9 @@ function selectGlobalView(){
 function selectBranch(branch){
   isGlobalView=false;currBranch=branch;
   document.getElementById('bdBranchTitle').textContent=branch;
-  if(!bdData[branch]){
+  // If we have bdData from Firebase/localStorage, use it
+  // Only auto-create rows if absolutely no data exists for this branch
+  if(!bdData[branch]||bdData[branch].length===0){
     const branchJobs=allJobs.filter(j=>j.branch===branch&&j.status!=='Opportunity');
     bdData[branch]=branchJobs.length?branchJobs.map(j=>createBDRow(j)):[newBDRow()];
     bdData[branch].forEach((r,i)=>recalcBDRow(branch,i));
